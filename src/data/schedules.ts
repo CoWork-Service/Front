@@ -1,0 +1,122 @@
+import type { Timetable } from '../types'
+
+export const timetables: Timetable[] = [
+  {
+    id: 'tt-1',
+    cohortId: '2026',
+    title: '4월 정기총회 날짜 조율',
+    description: '4월 정기총회 날짜를 조율합니다. 가능한 날짜와 시간을 선택해주세요.',
+    dateRange: { start: '2026-04-17', end: '2026-04-23' },
+    timeRange: { start: '14:00', end: '20:00' },
+    slotMinutes: 60,
+    participants: ['김민준', '이서연', '박지훈', '최예은', '정다은', '윤성호'],
+    status: 'open',
+    createdBy: '김민준',
+    createdAt: '2026-04-05T10:00:00',
+    responses: [
+      {
+        id: 'resp-1-1',
+        participantName: '김민준',
+        availableSlots: [
+          { date: '2026-04-17', time: '14:00' },
+          { date: '2026-04-17', time: '15:00' },
+          { date: '2026-04-20', time: '14:00' },
+          { date: '2026-04-20', time: '15:00' },
+          { date: '2026-04-20', time: '16:00' },
+        ],
+        respondedAt: '2026-04-06T10:00:00',
+      },
+      {
+        id: 'resp-1-2',
+        participantName: '이서연',
+        availableSlots: [
+          { date: '2026-04-20', time: '14:00' },
+          { date: '2026-04-20', time: '15:00' },
+          { date: '2026-04-21', time: '14:00' },
+          { date: '2026-04-21', time: '15:00' },
+        ],
+        respondedAt: '2026-04-06T11:00:00',
+      },
+      {
+        id: 'resp-1-3',
+        participantName: '박지훈',
+        availableSlots: [
+          { date: '2026-04-17', time: '15:00' },
+          { date: '2026-04-17', time: '16:00' },
+          { date: '2026-04-20', time: '14:00' },
+          { date: '2026-04-20', time: '15:00' },
+          { date: '2026-04-20', time: '16:00' },
+          { date: '2026-04-20', time: '17:00' },
+        ],
+        respondedAt: '2026-04-07T09:00:00',
+      },
+      {
+        id: 'resp-1-4',
+        participantName: '최예은',
+        availableSlots: [
+          { date: '2026-04-20', time: '15:00' },
+          { date: '2026-04-20', time: '16:00' },
+          { date: '2026-04-22', time: '14:00' },
+        ],
+        respondedAt: '2026-04-07T14:00:00',
+      },
+    ],
+  },
+  {
+    id: 'tt-2',
+    cohortId: '2026',
+    title: '운영진 MT 날짜 조율',
+    description: '상반기 운영진 MT 날짜를 조율합니다.',
+    dateRange: { start: '2026-05-01', end: '2026-05-10' },
+    timeRange: { start: '09:00', end: '21:00' },
+    slotMinutes: 60,
+    participants: ['김민준', '이서연', '박지훈', '최예은', '정다은', '윤성호'],
+    status: 'open',
+    createdBy: '김민준',
+    createdAt: '2026-04-08T09:00:00',
+    responses: [],
+  },
+  {
+    id: 'tt-3',
+    cohortId: '2025',
+    title: '2025 기수 종강 파티 날짜 조율',
+    description: '종강 파티 날짜 조율 - 마감됨',
+    dateRange: { start: '2025-12-15', end: '2025-12-20' },
+    timeRange: { start: '18:00', end: '23:00' },
+    slotMinutes: 60,
+    participants: ['이전회장', '이전총무', '이전기획'],
+    status: 'closed',
+    createdBy: '이전회장',
+    createdAt: '2025-12-01T10:00:00',
+    responses: [
+      {
+        id: 'resp-3-1',
+        participantName: '이전회장',
+        availableSlots: [
+          { date: '2025-12-18', time: '18:00' },
+          { date: '2025-12-18', time: '19:00' },
+        ],
+        respondedAt: '2025-12-02T10:00:00',
+      },
+      {
+        id: 'resp-3-2',
+        participantName: '이전총무',
+        availableSlots: [
+          { date: '2025-12-18', time: '18:00' },
+          { date: '2025-12-19', time: '19:00' },
+        ],
+        respondedAt: '2025-12-02T11:00:00',
+      },
+      {
+        id: 'resp-3-3',
+        participantName: '이전기획',
+        availableSlots: [
+          { date: '2025-12-18', time: '18:00' },
+          { date: '2025-12-18', time: '19:00' },
+          { date: '2025-12-18', time: '20:00' },
+        ],
+        respondedAt: '2025-12-03T09:00:00',
+      },
+    ],
+  },
+]
