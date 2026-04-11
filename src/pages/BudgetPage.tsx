@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Search, Receipt, Trash2, Edit2, Eye, TrendingDown } from 'lucide-react'
+import { Plus, Search, Receipt, Trash2, Edit2, Eye, TrendingDown, Smartphone, QrCode } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
 import { useBudgetStore } from '../store/useBudgetStore'
 import { useCohortStore } from '../store/useCohortStore'
@@ -39,6 +40,7 @@ export default function BudgetPage() {
   const [form, setForm] = useState(defaultForm)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null)
+  const [qrOpen, setQrOpen] = useState(false)
 
   const cohortExpenses = useMemo(
     () => expenses.filter((e) => e.cohortId === currentCohortId),
@@ -214,10 +216,19 @@ export default function BudgetPage() {
         title={editTarget ? '지출 수정' : '지출 등록'}
         size="lg"
         footer={
-          <>
-            <button onClick={() => setFormOpen(false)} className="btn-secondary">취소</button>
-            <button onClick={handleSave} className="btn-primary">저장</button>
-          </>
+          <div className="flex items-center justify-between w-full">
+            <button
+              onClick={() => setQrOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <Smartphone size={15} />
+              모바일로 등록하기
+            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setFormOpen(false)} className="btn-secondary">취소</button>
+              <button onClick={handleSave} className="btn-primary">저장</button>
+            </div>
+          </div>
         }
       >
         <div className="grid grid-cols-2 gap-4">
@@ -284,6 +295,29 @@ export default function BudgetPage() {
         </>
       }>
         <p className="text-sm text-slate-600">이 지출 내역을 삭제하시겠습니까?</p>
+      </Modal>
+
+      {/* 모바일 QR 등록 모달 */}
+      <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="모바일로 지출 등록" size="sm">
+        <div className="flex flex-col items-center py-2 gap-4">
+          <div className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm">
+            <QRCodeSVG
+              value={`${window.location.origin}/budget/mobile-register`}
+              size={180}
+              bgColor="#ffffff"
+              fgColor="#1e3a8a"
+              level="M"
+              includeMargin={false}
+            />
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-slate-800">QR코드를 스캔하세요</p>
+            <p className="text-xs text-slate-500">모바일 카메라로 스캔하면<br />지출 등록 페이지로 이동합니다.</p>
+          </div>
+          <div className="w-full bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-xs text-blue-700 text-center">
+            영수증 사진 촬영 및 금액 입력 후 제출하면<br />자동으로 지출 내역에 반영됩니다.
+          </div>
+        </div>
       </Modal>
     </div>
   )

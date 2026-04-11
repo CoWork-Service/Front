@@ -3,7 +3,7 @@ import type { Timetable } from '../types'
 export const timetables: Timetable[] = [
   {
     id: 'tt-1',
-    cohortId: '2026',
+    cohortId: '1',
     title: '4월 정기총회 날짜 조율',
     description: '4월 정기총회 날짜를 조율합니다. 가능한 날짜와 시간을 선택해주세요.',
     dateRange: { start: '2026-04-17', end: '2026-04-23' },
@@ -64,7 +64,7 @@ export const timetables: Timetable[] = [
   },
   {
     id: 'tt-2',
-    cohortId: '2026',
+    cohortId: '1',
     title: '운영진 MT 날짜 조율',
     description: '상반기 운영진 MT 날짜를 조율합니다.',
     dateRange: { start: '2026-05-01', end: '2026-05-10' },
@@ -78,7 +78,7 @@ export const timetables: Timetable[] = [
   },
   {
     id: 'tt-3',
-    cohortId: '2025',
+    cohortId: '2',
     title: '2025 기수 종강 파티 날짜 조율',
     description: '종강 파티 날짜 조율 - 마감됨',
     dateRange: { start: '2025-12-15', end: '2025-12-20' },

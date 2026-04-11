@@ -3,7 +3,7 @@ import type { Asset } from '../types'
 export const assets: Asset[] = [
   {
     id: 'asset-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '무선 마이크 세트',
     category: '음향장비',
     tags: ['행사', '음향'],
@@ -30,7 +30,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-2',
-    cohortId: '2026',
+    cohortId: '1',
     name: '빔프로젝터',
     category: '영상장비',
     tags: ['행사', '발표'],
@@ -58,7 +58,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-3',
-    cohortId: '2026',
+    cohortId: '1',
     name: '접이식 테이블',
     category: '가구',
     tags: ['행사', '부스'],
@@ -96,7 +96,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-4',
-    cohortId: '2026',
+    cohortId: '1',
     name: '이동식 화이트보드',
     category: '사무용품',
     tags: ['회의', '강의'],
@@ -112,7 +112,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-5',
-    cohortId: '2026',
+    cohortId: '1',
     name: '현수막 거치대',
     category: '행사용품',
     tags: ['홍보', '행사'],
@@ -128,7 +128,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-6',
-    cohortId: '2026',
+    cohortId: '1',
     name: '카메라 (DSLR)',
     category: '촬영장비',
     tags: ['촬영', '행사'],
@@ -155,7 +155,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-7',
-    cohortId: '2026',
+    cohortId: '1',
     name: '스피커 (블루투스)',
     category: '음향장비',
     tags: ['음향', '행사'],
@@ -171,7 +171,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-8',
-    cohortId: '2026',
+    cohortId: '1',
     name: '의자 (접이식)',
     category: '가구',
     tags: ['행사'],
@@ -187,7 +187,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-9',
-    cohortId: '2026',
+    cohortId: '1',
     name: '노트북',
     category: '전자기기',
     tags: ['업무', '발표'],
@@ -203,7 +203,7 @@ export const assets: Asset[] = [
   },
   {
     id: 'asset-10',
-    cohortId: '2026',
+    cohortId: '1',
     name: '롤스크린 (3m)',
     category: '행사용품',
     tags: ['발표', '영상'],

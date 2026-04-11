@@ -22,6 +22,7 @@ import SchedulesPage from './pages/SchedulesPage'
 import ScheduleNewPage from './pages/ScheduleNewPage'
 import ScheduleRespondPage from './pages/ScheduleRespondPage'
 import ScheduleResultsPage from './pages/ScheduleResultsPage'
+import OrgPage from './pages/OrgPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuth = localStorage.getItem('dowork_auth') === 'true'
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/schedules/new" element={<ScheduleNewPage />} />
             <Route path="/schedules/:pollId/respond" element={<ScheduleRespondPage />} />
             <Route path="/schedules/:pollId/results" element={<ScheduleResultsPage />} />
+            <Route path="/org" element={<OrgPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

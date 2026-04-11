@@ -4,7 +4,7 @@ export const workspaces: Workspace[] = [
   // ── 전체 워크스페이스 (기수별) ──────────────────────────────────────
   {
     id: 'all',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '전체',
     name: '전체 워크스페이스',
     description: '모든 부서가 함께 사용하는 공용 공간입니다.',
@@ -42,7 +42,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'all-2025',
-    cohortId: '2025',
+    cohortId: '2',
     departmentId: '전체',
     name: '전체 워크스페이스',
     description: '모든 부서가 함께 사용하는 공용 공간입니다.',
@@ -67,7 +67,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'ws-1',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '회장단',
     name: '회장단',
     description: '학생회 전반 운영 및 대내외 업무',
@@ -107,7 +107,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'ws-2',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '총무부',
     name: '총무부',
     description: '예산 관리, 물품 구매, 자산 현황',
@@ -132,7 +132,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'ws-3',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '기획국',
     name: '기획국',
     description: '행사 기획, 정기총회, 각종 프로그램',
@@ -172,7 +172,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'ws-4',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '홍보국',
     name: '홍보국',
     description: 'SNS 관리, 포스터 제작, 홍보 전략',
@@ -197,7 +197,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'ws-5',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '복지국',
     name: '복지국',
     description: '학생 복지 사업, 과잠 공구, 간식 행사',
@@ -222,7 +222,7 @@ export const workspaces: Workspace[] = [
   },
   {
     id: 'ws-6',
-    cohortId: '2026',
+    cohortId: '1',
     departmentId: '대외협력',
     name: '대외협력',
     description: '외부 기관 협력, 행사 협찬, 계약 관리',

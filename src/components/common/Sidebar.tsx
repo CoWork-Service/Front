@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   Home,
   FolderOpen,
@@ -9,9 +9,10 @@ import {
   ClipboardList,
   Layers,
   CalendarClock,
+  ShieldCheck,
 } from 'lucide-react'
 
-const navItems = [
+const mainNavItems = [
   { to: '/home', label: '홈', icon: <Home size={18} /> },
   { to: '/files', label: '파일 관리', icon: <FolderOpen size={18} /> },
   { to: '/budget', label: '예산 처리', icon: <Wallet size={18} /> },
@@ -21,6 +22,28 @@ const navItems = [
   { to: '/workspaces', label: '워크스페이스', icon: <Layers size={18} /> },
   { to: '/schedules', label: '일정 관리', icon: <CalendarClock size={18} /> },
 ]
+
+function NavItem({ to, label, icon }: { to: string; label: string; icon: React.ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          isActive
+            ? 'bg-blue-50 text-blue-700'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <span className={isActive ? 'text-blue-600' : 'text-slate-400'}>{icon}</span>
+          {label}
+        </>
+      )}
+    </NavLink>
+  )
+}
 
 export function Sidebar() {
   return (
@@ -38,33 +61,17 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* 네비게이션 */}
+      {/* 메인 네비게이션 */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className={isActive ? 'text-blue-600' : 'text-slate-400'}>{item.icon}</span>
-                {item.label}
-              </>
-            )}
-          </NavLink>
+        {mainNavItems.map((item) => (
+          <NavItem key={item.to} {...item} />
         ))}
       </nav>
 
-      {/* 하단 버전 */}
-      <div className="px-5 py-3 border-t border-slate-100">
-        <p className="text-xs text-slate-400">두워크 v0.1 · 더미 데이터 모드</p>
+      {/* 하단 조직 관리 + 버전 */}
+      <div className="px-3 pb-3 border-t border-slate-100 pt-3 space-y-0.5">
+        <NavItem to="/org" label="조직 관리" icon={<ShieldCheck size={18} />} />
+        <p className="text-xs text-slate-400 px-3 pt-2">두워크 v0.1 · 더미 데이터 모드</p>
       </div>
     </aside>
   )

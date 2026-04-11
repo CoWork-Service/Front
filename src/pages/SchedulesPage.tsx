@@ -125,10 +125,17 @@ export default function TimetablesPage() {
         title="일정 관리"
         description="캘린더로 일정을 확인하고 가능한 시간을 조율합니다."
         actions={
-          <Link to="/schedules/new" className="btn-primary">
-            <Plus size={16} />
-            조율 만들기
-          </Link>
+          view === 'polls' ? (
+            <Link to="/schedules/new" className="btn-primary">
+              <Plus size={16} />
+              조율 만들기
+            </Link>
+          ) : (
+            <button onClick={() => setView('polls')} className="btn-primary">
+              <Plus size={16} />
+              일정 등록하기
+            </button>
+          )
         }
       />
 

@@ -3,7 +3,7 @@ import type { Expense } from '../types'
 export const expenses: Expense[] = [
   {
     id: 'exp-1',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-04-05',
     department: '기획국',
     category: '행사비',
@@ -16,7 +16,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-2',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-04-06',
     department: '총무부',
     category: '소모품',
@@ -29,7 +29,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-3',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-04-04',
     department: '복지국',
     category: '식대',
@@ -42,7 +42,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-4',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-04-03',
     department: '홍보국',
     category: '인쇄비',
@@ -54,7 +54,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-5',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-04-01',
     department: '기획국',
     category: '행사비',
@@ -68,7 +68,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-6',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-28',
     department: '총무부',
     category: '소모품',
@@ -81,7 +81,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-7',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-25',
     department: '복지국',
     category: '행사비',
@@ -94,7 +94,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-8',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-20',
     department: '대외협력',
     category: '기타',
@@ -108,7 +108,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-9',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-15',
     department: '기획국',
     category: '인쇄비',
@@ -120,7 +120,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-10',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-10',
     department: '홍보국',
     category: '소모품',
@@ -132,7 +132,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-11',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-08',
     department: '회장단',
     category: '식대',
@@ -144,7 +144,7 @@ export const expenses: Expense[] = [
   },
   {
     id: 'exp-12',
-    cohortId: '2026',
+    cohortId: '1',
     date: '2026-03-05',
     department: '총무부',
     category: '기타',
@@ -158,7 +158,7 @@ export const expenses: Expense[] = [
   // 2025 기수
   {
     id: 'exp-13',
-    cohortId: '2025',
+    cohortId: '2',
     date: '2025-04-10',
     department: '기획국',
     category: '행사비',

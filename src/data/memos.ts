@@ -3,7 +3,7 @@ import type { Memo } from '../types'
 export const memos: Memo[] = [
   {
     id: 'memo-1',
-    cohortId: '2026',
+    cohortId: '1',
     title: '이번주 수요일까지 과잠 수요조사 마무리',
     content: '구글폼 응답 취합 후 신청 인원 정리해서 총무부 전달. 미응답자 재공지 필요.',
     department: '복지국',
@@ -16,7 +16,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-2',
-    cohortId: '2026',
+    cohortId: '1',
     title: '학생회비 납부 독려 문자 발송',
     content: '미납자 명단 확인 후 문자 발송 요청. 납부 계좌 안내 문구 첨부.',
     department: '총무부',
@@ -29,7 +29,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-3',
-    cohortId: '2026',
+    cohortId: '1',
     title: '4월 정기총회 준비 체크리스트',
     content: '장소 예약(완료), 안건 준비, 공지문 작성, 참석 확인 명단 관리.',
     department: '기획국',
@@ -42,7 +42,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-4',
-    cohortId: '2026',
+    cohortId: '1',
     title: '학교 행사 포스터 홍보국 전달',
     content: 'SNS 업로드용 이미지 파일 포맷 확인(1080x1080). 인스타 + 에브리타임 동시 업로드.',
     department: '홍보국',
@@ -55,7 +55,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-5',
-    cohortId: '2026',
+    cohortId: '1',
     title: '복사기 용지 구매 요청',
     content: 'A4 용지 2박스, 총무부에 구매 신청서 제출 완료. 영수증 예산 처리 필요.',
     department: '총무부',
@@ -67,7 +67,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-6',
-    cohortId: '2026',
+    cohortId: '1',
     title: '신입생 오리엔테이션 자료 보관',
     content: 'OT 발표 자료, 학생회 소개 영상 파일 관리 폴더에 업로드 완료.',
     department: '기획국',
@@ -79,7 +79,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-7',
-    cohortId: '2026',
+    cohortId: '1',
     title: '외부 협력 업체 계약서 스캔 후 파일 관리에 업로드',
     content: '행사 대행사 계약서 원본 스캔본 PDF로 업로드. 대외협력부 폴더에 저장.',
     department: '대외협력',
@@ -92,7 +92,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-8',
-    cohortId: '2026',
+    cohortId: '1',
     title: '자산 목록 현황 재확인',
     content: '분실된 무선 마이크 확인 필요. 창고 보관 물품 목록과 시스템 목록 대조.',
     department: '총무부',
@@ -105,7 +105,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-9',
-    cohortId: '2026',
+    cohortId: '1',
     title: '회의실 예약 시스템 변경 공지',
     content: '다음 달부터 회의실 예약은 학교 포털에서만 가능. 운영진 전체 공지 필요.',
     department: '회장단',
@@ -118,7 +118,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-10',
-    cohortId: '2026',
+    cohortId: '1',
     title: '1분기 예산 결산 보고서 작성',
     content: '1~3월 지출 내역 취합, 부서별 집행 현황 정리. 회장단에 보고 후 학생처 제출.',
     department: '총무부',
@@ -132,7 +132,7 @@ export const memos: Memo[] = [
   // 2025 기수 데이터
   {
     id: 'memo-11',
-    cohortId: '2025',
+    cohortId: '2',
     title: '2025 기수 인계사항: 과잠 공동구매 업체 연락처',
     content: '담당자: 홍길동 010-1234-5678. 매년 3월 수요조사 후 4월 발주.',
     department: '복지국',
@@ -144,7 +144,7 @@ export const memos: Memo[] = [
   },
   {
     id: 'memo-12',
-    cohortId: '2025',
+    cohortId: '2',
     title: '학생처 담당자 변경',
     content: '2025년 하반기부터 학생처 담당자가 김OO에서 박OO으로 변경됨.',
     department: '회장단',

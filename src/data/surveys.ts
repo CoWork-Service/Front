@@ -3,7 +3,7 @@ import type { Survey } from '../types'
 export const surveys: Survey[] = [
   {
     id: 'survey-1',
-    cohortId: '2026',
+    cohortId: '1',
     title: '2026 학생회 신입생 만족도 조사',
     description: '이번 OT 및 신입생 환영 행사에 대한 여러분의 의견을 들려주세요.',
     status: 'open',
@@ -101,7 +101,7 @@ export const surveys: Survey[] = [
   },
   {
     id: 'survey-2',
-    cohortId: '2026',
+    cohortId: '1',
     title: '과잠 수요조사',
     description: '2026 기수 과잠 단체 주문을 위한 수요조사입니다. 4월 10일까지 응답해주세요.',
     status: 'open',
@@ -154,7 +154,7 @@ export const surveys: Survey[] = [
   },
   {
     id: 'survey-3',
-    cohortId: '2026',
+    cohortId: '1',
     title: '4월 정기총회 안건 사전 조사',
     description: '4월 정기총회에서 논의할 안건을 미리 제안해주세요.',
     status: 'draft',
@@ -177,7 +177,7 @@ export const surveys: Survey[] = [
   },
   {
     id: 'survey-4',
-    cohortId: '2025',
+    cohortId: '2',
     title: '2025 기수 종강 파티 참가 신청',
     description: '종강 파티 참가 여부와 식사 선호도를 알려주세요.',
     status: 'closed',

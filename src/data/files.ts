@@ -4,7 +4,7 @@ export const fileItems: FileItem[] = [
   // 루트 폴더들
   {
     id: 'folder-root-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '기획국',
     type: 'folder',
     parentId: undefined,
@@ -15,7 +15,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'folder-root-2',
-    cohortId: '2026',
+    cohortId: '1',
     name: '총무부',
     type: 'folder',
     parentId: undefined,
@@ -26,7 +26,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'folder-root-3',
-    cohortId: '2026',
+    cohortId: '1',
     name: '홍보국',
     type: 'folder',
     parentId: undefined,
@@ -37,7 +37,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'folder-root-4',
-    cohortId: '2026',
+    cohortId: '1',
     name: '복지국',
     type: 'folder',
     parentId: undefined,
@@ -48,7 +48,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'folder-root-5',
-    cohortId: '2026',
+    cohortId: '1',
     name: '공용 자료',
     type: 'folder',
     parentId: undefined,
@@ -59,7 +59,7 @@ export const fileItems: FileItem[] = [
   // 기획국 하위
   {
     id: 'folder-plan-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '행사 기획',
     type: 'folder',
     parentId: 'folder-root-1',
@@ -70,7 +70,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-plan-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '4월 정기총회 계획서.pdf',
     type: 'file',
     mimeType: 'application/pdf',
@@ -87,7 +87,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-plan-2',
-    cohortId: '2026',
+    cohortId: '1',
     name: 'OT 발표자료.pptx',
     type: 'file',
     mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -105,7 +105,7 @@ export const fileItems: FileItem[] = [
   // 총무부 하위
   {
     id: 'folder-admin-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '예산 관련',
     type: 'folder',
     parentId: 'folder-root-2',
@@ -116,7 +116,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-admin-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '1분기 예산 집행 내역.xlsx',
     type: 'file',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -133,7 +133,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-admin-2',
-    cohortId: '2026',
+    cohortId: '1',
     name: '학생회비 납부 현황.xlsx',
     type: 'file',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -151,7 +151,7 @@ export const fileItems: FileItem[] = [
   // 홍보국 하위
   {
     id: 'file-pr-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '4월 행사 포스터.png',
     type: 'file',
     mimeType: 'image/png',
@@ -168,7 +168,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-pr-2',
-    cohortId: '2026',
+    cohortId: '1',
     name: '학생회 로고 원본.ai',
     type: 'file',
     mimeType: 'application/illustrator',
@@ -185,7 +185,7 @@ export const fileItems: FileItem[] = [
   // 공용 자료
   {
     id: 'file-common-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '2026 학생회 운영 규정.pdf',
     type: 'file',
     mimeType: 'application/pdf',
@@ -201,7 +201,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-common-2',
-    cohortId: '2026',
+    cohortId: '1',
     name: '행사 신청서 양식.docx',
     type: 'file',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -216,7 +216,7 @@ export const fileItems: FileItem[] = [
   },
   {
     id: 'file-common-3',
-    cohortId: '2026',
+    cohortId: '1',
     name: '회의실 예약 안내.pdf',
     type: 'file',
     mimeType: 'application/pdf',
@@ -232,7 +232,7 @@ export const fileItems: FileItem[] = [
   // 복지국 하위
   {
     id: 'file-welfare-1',
-    cohortId: '2026',
+    cohortId: '1',
     name: '과잠 수요조사 결과.xlsx',
     type: 'file',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
