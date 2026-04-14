@@ -55,7 +55,7 @@ export function Sidebar() {
             <span className="text-white font-bold text-sm">두</span>
           </div>
           <div>
-            <p className="font-bold text-slate-900 text-sm leading-tight">두워크</p>
+            <p className="font-bold text-slate-900 text-sm leading-tight">CoWork</p>
             <p className="text-xs text-slate-400 leading-tight">학생회 행정 플랫폼</p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export function Sidebar() {
       {/* 하단 조직 관리 + 버전 */}
       <div className="px-3 pb-3 border-t border-slate-100 pt-3 space-y-0.5">
         <NavItem to="/org" label="조직 관리" icon={<ShieldCheck size={18} />} />
-        <p className="text-xs text-slate-400 px-3 pt-2">두워크 v0.1 · 더미 데이터 모드</p>
+        <p className="text-xs text-slate-400 px-3 pt-2">CoWork v0.1 · 더미 데이터 모드</p>
       </div>
     </aside>
   )

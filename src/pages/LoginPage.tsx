@@ -33,7 +33,7 @@ export default function LoginPage() {
           <div className="inline-flex w-14 h-14 rounded-2xl bg-blue-600 items-center justify-center mb-3">
             <span className="text-white font-bold text-2xl">두</span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">두워크</h1>
+          <h1 className="text-xl font-bold text-slate-900">CoWork</h1>
           <p className="text-sm text-slate-500 mt-1">학생회 행정 플랫폼</p>
         </div>
 

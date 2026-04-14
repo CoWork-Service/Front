@@ -33,7 +33,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter>
         <Routes>
           {/* 공개 라우트 */}
           <Route path="/" element={<LandingPage />} />

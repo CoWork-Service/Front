@@ -27,7 +27,7 @@ export default function LandingPage() {
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
             <span className="text-white font-bold text-sm">두</span>
           </div>
-          <span className="font-bold text-slate-900">두워크</span>
+          <span className="font-bold text-slate-900">CoWork</span>
         </div>
         <Link
           to="/login"
@@ -87,7 +87,7 @@ export default function LandingPage() {
                 <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
                   <span className="text-white font-bold text-xs">두</span>
                 </div>
-                <span className="text-sm font-semibold text-slate-700">두워크</span>
+                <span className="text-sm font-semibold text-slate-700">CoWork</span>
                 <span className="ml-auto text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">2026 기수</span>
               </div>
 
@@ -131,7 +131,7 @@ export default function LandingPage() {
 
       {/* 푸터 */}
       <footer className="bg-white border-t border-slate-200 py-6 text-center">
-        <p className="text-sm text-slate-400">두워크 — 학생회 행정 플랫폼 · 더미 데이터 기반 프론트엔드</p>
+        <p className="text-sm text-slate-400">CoWork — 학생회 행정 플랫폼 · 더미 데이터 기반 프론트엔드</p>
       </footer>
     </div>
   )
