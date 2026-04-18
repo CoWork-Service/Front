@@ -25,6 +25,7 @@ import ScheduleResultsPage from './pages/ScheduleResultsPage'
 import OrgPage from './pages/OrgPage'
 import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
+import MobileRegisterPage from './pages/MobileRegisterPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuth = localStorage.getItem('dowork_auth') === 'true'
@@ -43,6 +44,9 @@ export default function App() {
 
           {/* 설문 응답 (공개) */}
           <Route path="/surveys/:surveyId/respond" element={<SurveyRespondPage />} />
+
+          {/* 모바일 지출 등록 (공개, QR 세션) */}
+          <Route path="/budget/mobile-register/:token" element={<MobileRegisterPage />} />
 
           {/* 로그인 후 앱 셸 */}
           <Route
