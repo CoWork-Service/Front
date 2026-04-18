@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { Plus, Search, Trash2, Edit2, Eye, TrendingDown, Smartphone, QrCode, CalendarDays, Image, CheckSquare, Square, Receipt } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
@@ -195,6 +195,35 @@ export default function BudgetPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [evidenceExpense, setEvidenceExpense] = useState<{ expense: Expense; showOnly: 'receipt' | 'photos' } | null>(null)
   const [qrOpen, setQrOpen] = useState(false)
+  const [qrToken, setQrToken] = useState('')
+  const [qrRemaining, setQrRemaining] = useState(0)
+
+  const SESSION_TTL = 5 * 60 * 1000
+
+  const generateQrSession = useCallback(() => {
+    const token = btoa(JSON.stringify({ cohortId: currentCohortId, createdAt: Date.now() }))
+    setQrToken(token)
+    setQrRemaining(SESSION_TTL)
+  }, [currentCohortId])
+
+  const openQr = () => {
+    generateQrSession()
+    setQrOpen(true)
+  }
+
+  useEffect(() => {
+    if (!qrOpen) return
+    const id = setInterval(() => {
+      setQrRemaining((prev) => {
+        const next = Math.max(0, prev - 1000)
+        if (next === 0) {
+          generateQrSession() // 만료되면 자동 갱신
+        }
+        return next
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [qrOpen, generateQrSession])
 
   const cohortExpenses = useMemo(
     () => expenses.filter((e) => e.cohortId === currentCohortId),
@@ -435,7 +464,7 @@ export default function BudgetPage() {
         footer={
           <div className="flex items-center justify-between w-full">
             <button
-              onClick={() => setQrOpen(true)}
+              onClick={openQr}
               className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             >
               <Smartphone size={15} />
@@ -548,22 +577,39 @@ export default function BudgetPage() {
       {/* 모바일 QR 등록 모달 */}
       <Modal open={qrOpen} onClose={() => setQrOpen(false)} title="모바일로 지출 등록" size="sm">
         <div className="flex flex-col items-center py-2 gap-4">
-          <div className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm">
-            <QRCodeSVG
-              value={`${window.location.origin}/budget/mobile-register`}
-              size={180}
-              bgColor="#ffffff"
-              fgColor="#1e3a8a"
-              level="M"
-              includeMargin={false}
-            />
+          {/* 카운트다운 */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-500">세션 유효 시간</span>
+            <span className={`font-mono font-semibold px-2 py-0.5 rounded-full border ${
+              qrRemaining < 60000
+                ? 'bg-red-50 text-red-600 border-red-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {Math.floor(qrRemaining / 60000)}:{String(Math.ceil((qrRemaining % 60000) / 1000)).padStart(2, '0')}
+            </span>
           </div>
+
+          {/* QR 코드 */}
+          <div className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm">
+            {qrToken && (
+              <QRCodeSVG
+                value={`${window.location.origin}/budget/mobile-register/${qrToken}`}
+                size={180}
+                bgColor="#ffffff"
+                fgColor="#1e3a8a"
+                level="M"
+                includeMargin={false}
+              />
+            )}
+          </div>
+
           <div className="text-center space-y-1">
             <p className="text-sm font-semibold text-slate-800">QR코드를 스캔하세요</p>
             <p className="text-xs text-slate-500">모바일 카메라로 스캔하면<br />지출 등록 페이지로 이동합니다.</p>
           </div>
           <div className="w-full bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-xs text-blue-700 text-center">
-            영수증 사진 촬영 및 금액 입력 후 제출하면<br />자동으로 지출 내역에 반영됩니다.
+            영수증 사진 촬영 → OCR 자동 추출 → 내역 확인 후 제출<br />
+            <span className="text-blue-500">만료 시 QR코드가 자동으로 갱신됩니다.</span>
           </div>
         </div>
       </Modal>
