@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, CalendarClock, Users, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { Plus, CalendarClock, Users, ChevronLeft, ChevronRight, Calendar, CalendarDays } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useScheduleStore } from '../store/useScheduleStore'
 import { useWorkspaceStore } from '../store/useWorkspaceStore'
 import { useCohortStore } from '../store/useCohortStore'
+import { useEventStore } from '../store/useEventStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { TimetableStatusBadge } from '../components/common/StatusBadge'
 import { EmptyState } from '../components/common/EmptyState'
@@ -42,8 +43,12 @@ export default function TimetablesPage() {
   const { workspaces } = useWorkspaceStore()
   const toast = useToast()
 
+  const { events } = useEventStore()
+  const cohortEvents = useMemo(() => events.filter((e) => e.cohortId === currentCohortId), [events, currentCohortId])
+
   const [view, setView] = useState<'calendar' | 'polls'>('calendar')
   const [statusFilter, setStatusFilter] = useState('')
+  const [eventFilter, setEventFilter] = useState('')
   const [closeConfirm, setCloseConfirm] = useState<string | null>(null)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
@@ -115,9 +120,12 @@ export default function TimetablesPage() {
   const selectedEvents = selectedDay ? getEventsForDay(selectedDay) : []
 
   const filtered = useMemo(() => {
-    if (!statusFilter) return cohortTimetables
-    return cohortTimetables.filter((t) => t.status === statusFilter)
-  }, [cohortTimetables, statusFilter])
+    let list = cohortTimetables
+    if (statusFilter) list = list.filter((t) => t.status === statusFilter)
+    if (eventFilter === '__none__') list = list.filter((t) => !t.eventId)
+    else if (eventFilter) list = list.filter((t) => t.eventId === eventFilter)
+    return list
+  }, [cohortTimetables, statusFilter, eventFilter])
 
   return (
     <div>
@@ -303,12 +311,19 @@ export default function TimetablesPage() {
       {/* ── 시간 조율 뷰 ── */}
       {view === 'polls' && (
         <>
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 mb-5 w-fit">
-            {[{ v: '', l: '전체' }, { v: 'open', l: '진행중' }, { v: 'closed', l: '마감' }].map(({ v, l }) => (
-              <button key={v} onClick={() => setStatusFilter(v)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${statusFilter === v ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-                {l}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 mb-5 flex-wrap">
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 w-fit">
+              {[{ v: '', l: '전체' }, { v: 'open', l: '진행중' }, { v: 'closed', l: '마감' }].map(({ v, l }) => (
+                <button key={v} onClick={() => setStatusFilter(v)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${statusFilter === v ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="select-input w-40 text-sm">
+              <option value="">전체 행사</option>
+              <option value="__none__">행사 미연결</option>
+              {cohortEvents.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+            </select>
           </div>
 
           {filtered.length === 0 ? (
@@ -328,10 +343,19 @@ export default function TimetablesPage() {
                       <h3 className="text-sm font-semibold text-slate-900 truncate">{tt.title}</h3>
                     </div>
                     {tt.description && <p className="text-xs text-slate-500 mb-2 truncate">{tt.description}</p>}
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                    <div className="flex items-center gap-4 text-xs text-slate-400 flex-wrap">
                       <span>{tt.dateRange.start} ~ {tt.dateRange.end}</span>
                       <span>{tt.timeRange.start} ~ {tt.timeRange.end}</span>
                       <span className="flex items-center gap-1"><Users size={11} />응답 {tt.responses.length}/{tt.participants.length}명</span>
+                      {tt.eventId && (() => {
+                        const ev = cohortEvents.find((e) => e.id === tt.eventId)
+                        return ev ? (
+                          <Link to={`/events/${ev.id}`} className="flex items-center gap-1 text-blue-600 hover:underline">
+                            <CalendarDays size={11} />
+                            {ev.name}
+                          </Link>
+                        ) : null
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">

@@ -13,6 +13,7 @@ export const expenses: Expense[] = [
     paymentMethod: '법인카드',
     receiptUrl: 'https://picsum.photos/seed/receipt1/300/400',
     createdAt: '2026-04-05T14:00:00',
+    eventId: 'evt-2',
   },
   {
     id: 'exp-2',
@@ -51,6 +52,7 @@ export const expenses: Expense[] = [
     amount: 15000,
     paymentMethod: '현금',
     createdAt: '2026-04-03T11:00:00',
+    eventId: 'evt-2',
   },
   {
     id: 'exp-5',
@@ -63,8 +65,10 @@ export const expenses: Expense[] = [
     amount: 150000,
     paymentMethod: '계좌이체',
     receiptUrl: 'https://picsum.photos/seed/receipt5/300/400',
+    photoIds: ['photo-1-3'],
     note: '계약서 파일 관리 > 기획국에 업로드 완료',
     createdAt: '2026-04-01T09:00:00',
+    eventId: 'evt-1',
   },
   {
     id: 'exp-6',
@@ -90,7 +94,9 @@ export const expenses: Expense[] = [
     amount: 82000,
     paymentMethod: '법인카드',
     receiptUrl: 'https://picsum.photos/seed/receipt7/300/400',
+    photoIds: ['photo-1-4'],
     createdAt: '2026-03-25T12:00:00',
+    eventId: 'evt-1',
   },
   {
     id: 'exp-8',
@@ -105,6 +111,7 @@ export const expenses: Expense[] = [
     receiptUrl: 'https://picsum.photos/seed/receipt8/300/400',
     note: '견적서 첨부 완료',
     createdAt: '2026-03-20T10:00:00',
+    eventId: 'evt-5',
   },
   {
     id: 'exp-9',
@@ -117,6 +124,7 @@ export const expenses: Expense[] = [
     amount: 25000,
     paymentMethod: '현금',
     createdAt: '2026-03-15T14:00:00',
+    eventId: 'evt-1',
   },
   {
     id: 'exp-10',

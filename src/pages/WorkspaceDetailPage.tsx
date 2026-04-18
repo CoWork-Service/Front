@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Plus, BookOpen, FileText, ArrowLeft, ChevronRight, Calendar, Users, Layers } from 'lucide-react'
+import { Plus, BookOpen, FileText, ArrowLeft, ChevronRight, Calendar, Users, Layers, CalendarDays } from 'lucide-react'
 import { useWorkspaceStore } from '../store/useWorkspaceStore'
+import { useEventStore } from '../store/useEventStore'
+import { useCohortStore } from '../store/useCohortStore'
 import { DepartmentTag } from '../components/common/DepartmentTag'
 import { EmptyState } from '../components/common/EmptyState'
 import { Modal } from '../components/common/Modal'
@@ -10,14 +12,18 @@ import { useToast } from '../components/common/Toast'
 export default function WorkspaceDetailPage() {
   const { departmentId } = useParams<{ departmentId: string }>()
   const { workspaces, addMeeting, deleteMeeting } = useWorkspaceStore()
+  const { events } = useEventStore()
+  const { currentCohortId } = useCohortStore()
   const toast = useToast()
+
+  const cohortEvents = useMemo(() => events.filter((e) => e.cohortId === currentCohortId), [events, currentCohortId])
 
   const workspace = workspaces.find((ws) => ws.id === departmentId)
   const [tab, setTab] = useState<'files' | 'meetings'>('meetings')
   const [newMeetingOpen, setNewMeetingOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [meetingForm, setMeetingForm] = useState({
-    title: '', date: '', attendees: '', agenda: '', content: '',
+    title: '', date: '', attendees: '', agenda: '', content: '', eventId: '',
   })
 
   if (!workspace) return <div className="p-8 text-slate-500">워크스페이스를 찾을 수 없습니다.</div>
@@ -35,10 +41,11 @@ export default function WorkspaceDetailPage() {
       attachments: [],
       workspaceId: workspace.id,
       createdBy: '김민준',
+      eventId: meetingForm.eventId || undefined,
     })
     toast.success('회의록이 작성되었습니다.')
     setNewMeetingOpen(false)
-    setMeetingForm({ title: '', date: '', attendees: '', agenda: '', content: '' })
+    setMeetingForm({ title: '', date: '', attendees: '', agenda: '', content: '', eventId: '' })
   }
 
   return (
@@ -101,9 +108,18 @@ export default function WorkspaceDetailPage() {
                 >
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-slate-900 mb-1">{m.title}</h3>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                       <span className="flex items-center gap-1"><Calendar size={12} />{m.date}</span>
                       <span className="flex items-center gap-1"><Users size={12} />{m.attendees.join(', ')}</span>
+                      {m.eventId && (() => {
+                        const ev = cohortEvents.find((e) => e.id === m.eventId)
+                        return ev ? (
+                          <span onClick={(e) => e.preventDefault()} className="flex items-center gap-1 text-blue-600">
+                            <CalendarDays size={11} />
+                            <Link to={`/events/${ev.id}`} className="hover:underline">{ev.name}</Link>
+                          </span>
+                        ) : null
+                      })()}
                     </div>
                     {m.content && (
                       <p className="text-xs text-slate-500 mt-1 line-clamp-1">{m.content}</p>
@@ -152,6 +168,15 @@ export default function WorkspaceDetailPage() {
           <div>
             <label className="label">내용</label>
             <textarea rows={5} value={meetingForm.content} onChange={(e) => setMeetingForm({ ...meetingForm, content: e.target.value })} placeholder="회의 내용을 작성하세요." className="textarea" />
+          </div>
+          <div>
+            <label className="label">연결 행사 (선택)</label>
+            <select value={meetingForm.eventId} onChange={(e) => setMeetingForm({ ...meetingForm, eventId: e.target.value })} className="select-input">
+              <option value="">행사 미연결</option>
+              {cohortEvents.map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name} ({ev.startDate})</option>
+              ))}
+            </select>
           </div>
         </div>
       </Modal>

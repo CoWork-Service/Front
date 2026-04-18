@@ -10,6 +10,7 @@ export const surveys: Survey[] = [
     createdBy: '박지훈',
     createdAt: '2026-04-01T10:00:00',
     updatedAt: '2026-04-02T09:00:00',
+    eventId: 'evt-1',
     questions: [
       {
         id: 'q-1-1', order: 1, title: '이름을 입력해주세요.', type: 'short_text', required: true,
@@ -161,6 +162,7 @@ export const surveys: Survey[] = [
     createdBy: '박지훈',
     createdAt: '2026-04-07T16:00:00',
     updatedAt: '2026-04-07T16:00:00',
+    eventId: 'evt-2',
     questions: [
       { id: 'q-3-1', order: 1, title: '이름', type: 'short_text', required: true },
       { id: 'q-3-2', order: 2, title: '제안할 안건을 작성해주세요.', type: 'long_text', required: true },

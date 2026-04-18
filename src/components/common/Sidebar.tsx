@@ -9,11 +9,13 @@ import {
   ClipboardList,
   Layers,
   CalendarClock,
+  CalendarDays,
   ShieldCheck,
 } from 'lucide-react'
 
 const mainNavItems = [
   { to: '/home', label: '홈', icon: <Home size={18} /> },
+  { to: '/events', label: '행사 관리', icon: <CalendarDays size={18} /> },
   { to: '/files', label: '파일 관리', icon: <FolderOpen size={18} /> },
   { to: '/budget', label: '예산 처리', icon: <Wallet size={18} /> },
   { to: '/assets', label: '자산 관리', icon: <Package size={18} /> },

@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Copy, BarChart2, Edit2, Trash2, ClipboardList } from 'lucide-react'
+import { Plus, Copy, BarChart2, Edit2, Trash2, ClipboardList, CalendarDays } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSurveyStore } from '../store/useSurveyStore'
 import { useCohortStore } from '../store/useCohortStore'
+import { useEventStore } from '../store/useEventStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { SurveyStatusBadge } from '../components/common/StatusBadge'
 import { EmptyState } from '../components/common/EmptyState'
@@ -13,10 +14,17 @@ import type { Survey } from '../types'
 export default function SurveysPage() {
   const { currentCohortId } = useCohortStore()
   const { surveys, deleteSurvey, updateStatus } = useSurveyStore()
+  const { events } = useEventStore()
   const toast = useToast()
   const navigate = useNavigate()
 
+  const cohortEvents = useMemo(
+    () => events.filter((e) => e.cohortId === currentCohortId),
+    [events, currentCohortId]
+  )
+
   const [statusFilter, setStatusFilter] = useState('')
+  const [eventFilter, setEventFilter] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const cohortSurveys = useMemo(
@@ -27,8 +35,10 @@ export default function SurveysPage() {
   const filtered = useMemo(() => {
     let list = [...cohortSurveys]
     if (statusFilter) list = list.filter((s) => s.status === statusFilter)
+    if (eventFilter === '__none__') list = list.filter((s) => !s.eventId)
+    else if (eventFilter) list = list.filter((s) => s.eventId === eventFilter)
     return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-  }, [cohortSurveys, statusFilter])
+  }, [cohortSurveys, statusFilter, eventFilter])
 
   const copyLink = (id: string) => {
     const url = `${window.location.origin}/surveys/${id}/respond`
@@ -49,12 +59,19 @@ export default function SurveysPage() {
       />
 
       {/* 필터 */}
-      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 mb-5 w-fit">
-        {[{ v: '', l: '전체' }, { v: 'draft', l: '작성중' }, { v: 'open', l: '진행중' }, { v: 'closed', l: '마감' }].map(({ v, l }) => (
-          <button key={v} onClick={() => setStatusFilter(v)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${statusFilter === v ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-            {l}
-          </button>
-        ))}
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 w-fit">
+          {[{ v: '', l: '전체' }, { v: 'draft', l: '작성중' }, { v: 'open', l: '진행중' }, { v: 'closed', l: '마감' }].map(({ v, l }) => (
+            <button key={v} onClick={() => setStatusFilter(v)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${statusFilter === v ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="select-input w-40 text-sm">
+          <option value="">전체 행사</option>
+          <option value="__none__">행사 미연결</option>
+          {cohortEvents.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+        </select>
       </div>
 
       {filtered.length === 0 ? (
@@ -76,11 +93,20 @@ export default function SurveysPage() {
                 {survey.description && (
                   <p className="text-xs text-slate-500 truncate mb-2">{survey.description}</p>
                 )}
-                <div className="flex items-center gap-4 text-xs text-slate-400">
+                <div className="flex items-center gap-4 text-xs text-slate-400 flex-wrap">
                   <span>문항 {survey.questions.length}개</span>
                   <span>응답 {survey.responses.length}개</span>
                   <span>수정: {survey.updatedAt.slice(0, 10)}</span>
                   <span>작성: {survey.createdBy}</span>
+                  {survey.eventId && (() => {
+                    const ev = cohortEvents.find((e) => e.id === survey.eventId)
+                    return ev ? (
+                      <Link to={`/events/${ev.id}`} className="flex items-center gap-1 text-blue-600 hover:underline">
+                        <CalendarDays size={11} />
+                        {ev.name}
+                      </Link>
+                    ) : null
+                  })()}
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">

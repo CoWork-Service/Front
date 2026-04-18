@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, Calendar, Users, Save, X, Paperclip } from 'lucide-react'
+import { ArrowLeft, Edit2, Trash2, Calendar, Users, Save, X, Paperclip, CalendarDays } from 'lucide-react'
 import { useWorkspaceStore } from '../store/useWorkspaceStore'
+import { useEventStore } from '../store/useEventStore'
+import { useCohortStore } from '../store/useCohortStore'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 
@@ -9,7 +11,11 @@ export default function MeetingDetailPage() {
   const { departmentId, meetingId } = useParams<{ departmentId: string; meetingId: string }>()
   const navigate = useNavigate()
   const { workspaces, updateMeeting, deleteMeeting } = useWorkspaceStore()
+  const { events } = useEventStore()
+  const { currentCohortId } = useCohortStore()
   const toast = useToast()
+
+  const cohortEvents = useMemo(() => events.filter((e) => e.cohortId === currentCohortId), [events, currentCohortId])
 
   const workspace = workspaces.find((ws) => ws.id === departmentId)
   const meeting = workspace?.meetings.find((m) => m.id === meetingId)
@@ -22,6 +28,7 @@ export default function MeetingDetailPage() {
     attendees: meeting?.attendees.join(', ') ?? '',
     agenda: meeting?.agenda ?? '',
     content: meeting?.content ?? '',
+    eventId: meeting?.eventId ?? '',
   })
 
   if (!workspace || !meeting) return <div className="p-8 text-slate-500">회의록을 찾을 수 없습니다.</div>
@@ -33,6 +40,7 @@ export default function MeetingDetailPage() {
       attendees: form.attendees.split(',').map((a) => a.trim()).filter(Boolean),
       agenda: form.agenda,
       content: form.content,
+      eventId: form.eventId || undefined,
     })
     toast.success('회의록이 수정되었습니다.')
     setEditing(false)
@@ -81,7 +89,7 @@ export default function MeetingDetailPage() {
       </div>
 
       {/* 메타 정보 */}
-      <div className="card p-4 mb-5 flex items-center gap-6 text-sm">
+      <div className="card p-4 mb-5 flex items-center gap-6 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <Calendar size={15} className="text-slate-400" />
           {editing ? (
@@ -96,6 +104,26 @@ export default function MeetingDetailPage() {
             <input type="text" value={form.attendees} onChange={(e) => setForm({ ...form, attendees: e.target.value })} className="input w-64 py-1" placeholder="쉼표로 구분" />
           ) : (
             <span className="text-slate-700">{meeting.attendees.join(', ')}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarDays size={15} className="text-slate-400" />
+          {editing ? (
+            <select value={form.eventId} onChange={(e) => setForm({ ...form, eventId: e.target.value })} className="select-input py-1 text-sm">
+              <option value="">행사 미연결</option>
+              {cohortEvents.map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name} ({ev.startDate})</option>
+              ))}
+            </select>
+          ) : meeting.eventId ? (
+            (() => {
+              const ev = cohortEvents.find((e) => e.id === meeting.eventId)
+              return ev ? (
+                <Link to={`/events/${ev.id}`} className="text-blue-600 hover:underline font-medium">{ev.name}</Link>
+              ) : <span className="text-slate-400">-</span>
+            })()
+          ) : (
+            <span className="text-slate-400">행사 미연결</span>
           )}
         </div>
       </div>

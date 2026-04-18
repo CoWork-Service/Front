@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Save } from 'lucide-react'
 import { useSurveyStore } from '../store/useSurveyStore'
 import { useCohortStore } from '../store/useCohortStore'
+import { useEventStore } from '../store/useEventStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { useToast } from '../components/common/Toast'
 import type { Question, QuestionType, QuestionOption } from '../types'
@@ -131,13 +132,17 @@ export default function SurveyEditPage() {
   const navigate = useNavigate()
   const { surveys, addSurvey, updateSurvey, updateStatus } = useSurveyStore()
   const { currentCohortId } = useCohortStore()
+  const { events } = useEventStore()
   const toast = useToast()
+
+  const cohortEvents = events.filter((e) => e.cohortId === currentCohortId)
 
   const isNew = surveyId === 'new'
   const existing = surveys.find((s) => s.id === surveyId)
 
   const [title, setTitle] = useState(existing?.title ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
+  const [eventId, setEventId] = useState(existing?.eventId ?? '')
   const [questions, setQuestions] = useState<Question[]>(existing?.questions ?? [])
 
   const addQuestion = (type: QuestionType = 'short_text') => {
@@ -188,12 +193,13 @@ export default function SurveyEditPage() {
         status: publish ? 'open' : 'draft',
         questions,
         createdBy: '김민준',
+        eventId: eventId || undefined,
       })
       if (publish) toast.success('설문이 공개되었습니다.')
       else toast.success('임시 저장되었습니다.')
       navigate(`/surveys/${id}/edit`)
     } else if (existing) {
-      updateSurvey(existing.id, { title, description, questions })
+      updateSurvey(existing.id, { title, description, questions, eventId: eventId || undefined })
       if (publish) updateStatus(existing.id, 'open')
       toast.success(publish ? '설문이 공개되었습니다.' : '저장되었습니다.')
     }
@@ -226,6 +232,15 @@ export default function SurveyEditPage() {
           <div>
             <label className="label">설문 설명</label>
             <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="응답자에게 보여줄 설명을 입력하세요." className="textarea" />
+          </div>
+          <div>
+            <label className="label">연결 행사 (선택)</label>
+            <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="select-input">
+              <option value="">행사 미연결</option>
+              {cohortEvents.map((ev) => (
+                <option key={ev.id} value={ev.id}>{ev.name} ({ev.startDate})</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

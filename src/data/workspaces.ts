@@ -24,6 +24,7 @@ export const workspaces: Workspace[] = [
         createdBy: '김민준',
         createdAt: '2026-04-08T09:00:00',
         updatedAt: '2026-04-08T09:00:00',
+        eventId: 'evt-2',
       },
       {
         id: 'meet-all-2',
@@ -154,6 +155,7 @@ export const workspaces: Workspace[] = [
         createdBy: '박지훈',
         createdAt: '2026-04-05T17:00:00',
         updatedAt: '2026-04-05T17:00:00',
+        eventId: 'evt-2',
       },
       {
         id: 'meet-3-2',
@@ -167,6 +169,7 @@ export const workspaces: Workspace[] = [
         createdBy: '박지훈',
         createdAt: '2026-03-25T15:00:00',
         updatedAt: '2026-03-25T15:00:00',
+        eventId: 'evt-1',
       },
     ],
   },

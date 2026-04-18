@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useScheduleStore } from '../store/useScheduleStore'
 import { useCohortStore } from '../store/useCohortStore'
+import { useEventStore } from '../store/useEventStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { useToast } from '../components/common/Toast'
 
@@ -9,7 +10,10 @@ export default function TimetableNewPage() {
   const navigate = useNavigate()
   const { addSchedule } = useScheduleStore()
   const { currentCohortId } = useCohortStore()
+  const { events } = useEventStore()
   const toast = useToast()
+
+  const cohortEvents = events.filter((e) => e.cohortId === currentCohortId)
 
   const [form, setForm] = useState({
     title: '',
@@ -20,6 +24,7 @@ export default function TimetableNewPage() {
     endTime: '21:00',
     slotMinutes: '60' as '30' | '60',
     participants: '',
+    eventId: '',
   })
 
   const handleCreate = () => {
@@ -37,6 +42,7 @@ export default function TimetableNewPage() {
       participants: form.participants.split(',').map((p) => p.trim()).filter(Boolean),
       status: 'open',
       createdBy: '김민준',
+      eventId: form.eventId || undefined,
     })
     toast.success('조율방이 생성되었습니다.')
     navigate(`/schedules/${id}/respond`)
@@ -88,6 +94,15 @@ export default function TimetableNewPage() {
         <div>
           <label className="label">참여 대상 (쉼표 구분)</label>
           <input type="text" value={form.participants} onChange={(e) => setForm({ ...form, participants: e.target.value })} placeholder="예: 김민준, 이서연, 박지훈" className="input" />
+        </div>
+        <div>
+          <label className="label">연결 행사 (선택)</label>
+          <select value={form.eventId} onChange={(e) => setForm({ ...form, eventId: e.target.value })} className="select-input">
+            <option value="">행사 미연결</option>
+            {cohortEvents.map((ev) => (
+              <option key={ev.id} value={ev.id}>{ev.name} ({ev.startDate})</option>
+            ))}
+          </select>
         </div>
         <button onClick={handleCreate} className="btn-primary w-full justify-center py-2.5 text-base">
           조율방 생성

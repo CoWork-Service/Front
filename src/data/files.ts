@@ -84,6 +84,7 @@ export const fileItems: FileItem[] = [
       { id: 'log-1', action: 'upload', actor: '박지훈', timestamp: '2026-04-07T10:00:00', detail: '파일 업로드' },
     ],
     previewUrl: 'https://picsum.photos/seed/file1/400/300',
+    eventId: 'evt-2',
   },
   {
     id: 'file-plan-2',
@@ -101,6 +102,7 @@ export const fileItems: FileItem[] = [
       { id: 'log-2', action: 'upload', actor: '박지훈', timestamp: '2026-04-01T15:00:00', detail: '파일 업로드' },
       { id: 'log-3', action: 'update', actor: '박지훈', timestamp: '2026-04-02T09:00:00', detail: '내용 수정' },
     ],
+    eventId: 'evt-1',
   },
   // 총무부 하위
   {
@@ -165,6 +167,7 @@ export const fileItems: FileItem[] = [
       { id: 'log-8', action: 'upload', actor: '최예은', timestamp: '2026-04-07T11:30:00', detail: '파일 업로드' },
     ],
     previewUrl: 'https://picsum.photos/seed/poster/400/300',
+    eventId: 'evt-2',
   },
   {
     id: 'file-pr-2',

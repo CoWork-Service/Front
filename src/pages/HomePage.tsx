@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Star, CheckSquare, RotateCcw, Flag, Check, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Star, CheckSquare, RotateCcw, Flag, Check, Trash2, Edit2, CalendarDays, MapPin, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useMemoStore } from '../store/useMemoStore'
 import { useCohortStore } from '../store/useCohortStore'
+import { useEventStore } from '../store/useEventStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { DepartmentTag } from '../components/common/DepartmentTag'
 import { DueDateBadge } from '../components/common/DueDateBadge'
@@ -115,10 +117,39 @@ const defaultForm: MemoFormData = {
   status: 'open',
 }
 
+const coverBorderMap: Record<string, string> = {
+  blue: 'border-l-blue-500',
+  green: 'border-l-emerald-500',
+  orange: 'border-l-amber-500',
+  purple: 'border-l-purple-500',
+  red: 'border-l-red-500',
+}
+
+const coverBgMap: Record<string, string> = {
+  blue: 'bg-blue-100 text-blue-700',
+  green: 'bg-emerald-100 text-emerald-700',
+  orange: 'bg-amber-100 text-amber-700',
+  purple: 'bg-purple-100 text-purple-700',
+  red: 'bg-red-100 text-red-700',
+}
+
 export default function HomePage() {
   const { currentCohortId } = useCohortStore()
   const { memos, addMemo, updateMemo, deleteMemo, togglePriority, toggleStatus } = useMemoStore()
+  const { events } = useEventStore()
   const toast = useToast()
+
+  const upcomingEvents = useMemo(() => {
+    return events
+      .filter(
+        (e) =>
+          e.cohortId === currentCohortId &&
+          e.status !== 'done' &&
+          e.status !== 'cancelled'
+      )
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))
+      .slice(0, 3)
+  }, [events, currentCohortId])
 
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<Sort>('latest')
@@ -213,6 +244,53 @@ export default function HomePage() {
 
   return (
     <div>
+      {/* 다가오는 행사 위젯 */}
+      {upcomingEvents.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={15} className="text-blue-500" />
+              <h2 className="text-sm font-semibold text-slate-700">다가오는 행사</h2>
+              <span className="text-xs text-slate-400">{upcomingEvents.length}개</span>
+            </div>
+            <Link to="/events" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+              모두 보기 <ArrowRight size={12} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {upcomingEvents.map((e) => {
+              const color = e.coverColor ?? 'blue'
+              const borderClass = coverBorderMap[color] ?? 'border-l-blue-500'
+              const tagClass = coverBgMap[color] ?? 'bg-blue-100 text-blue-700'
+              return (
+                <Link
+                  key={e.id}
+                  to={`/events/${e.id}`}
+                  className={`bg-white rounded-xl border border-slate-200 border-l-4 ${borderClass} p-4 hover:shadow-sm transition-shadow`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="text-sm font-semibold text-slate-800 leading-snug">{e.name}</p>
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${tagClass}`}>{e.category}</span>
+                  </div>
+                  <div className="space-y-1 text-xs text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                      <CalendarDays size={11} />
+                      <span>{e.startDate === e.endDate ? e.startDate : `${e.startDate} ~ ${e.endDate}`}</span>
+                    </div>
+                    {e.location && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={11} />
+                        <span className="truncate">{e.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title="인계 메모"
         description="업무 인계 사항과 할 일을 기록합니다."

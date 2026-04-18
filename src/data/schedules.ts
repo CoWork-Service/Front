@@ -13,6 +13,7 @@ export const timetables: Timetable[] = [
     status: 'open',
     createdBy: '김민준',
     createdAt: '2026-04-05T10:00:00',
+    eventId: 'evt-2',
     responses: [
       {
         id: 'resp-1-1',
@@ -75,6 +76,7 @@ export const timetables: Timetable[] = [
     createdBy: '김민준',
     createdAt: '2026-04-08T09:00:00',
     responses: [],
+    eventId: 'evt-3',
   },
   {
     id: 'tt-3',

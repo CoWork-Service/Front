@@ -65,6 +65,7 @@ export type FileItem = {
   updatedAt: string
   logs: FileLog[]
   previewUrl?: string
+  eventId?: string
 }
 
 // ==================== 예산 처리 ====================
@@ -84,8 +85,10 @@ export type Expense = {
   amount: number
   paymentMethod: PaymentMethod
   receiptUrl?: string
+  photoIds?: string[]  // EventPhoto.id 참조
   note?: string
   createdAt: string
+  eventId?: string
 }
 
 // ==================== 자산 관리 ====================
@@ -102,6 +105,7 @@ export type RentalRecord = {
   returnedAt?: string
   quantity: number
   note?: string
+  eventId?: string
 }
 
 export type Asset = {
@@ -179,6 +183,7 @@ export type Survey = {
   createdAt: string
   updatedAt: string
   createdBy: string
+  eventId?: string
 }
 
 // ==================== 워크스페이스 ====================
@@ -202,6 +207,7 @@ export type Meeting = {
   createdBy: string
   createdAt: string
   updatedAt: string
+  eventId?: string
 }
 
 export type Workspace = {
@@ -245,4 +251,49 @@ export type Timetable = {
   responses: TimetableResponse[]
   createdBy: string
   createdAt: string
+  eventId?: string
+}
+
+// ==================== 행사 ====================
+
+export type EventStatus = 'planning' | 'ongoing' | 'done' | 'cancelled'
+
+export type EventCategory =
+  | 'OT'
+  | '정기총회'
+  | 'MT'
+  | '체육대회'
+  | '축제'
+  | '간담회'
+  | '기타'
+
+export type EventPhotoTag = '행사사진' | '증빙사진' | '준비과정' | '기타'
+
+export type EventPhoto = {
+  id: string
+  url: string
+  caption?: string
+  tag?: EventPhotoTag
+  uploadedBy: string
+  uploadedAt: string
+}
+
+export type DoworkEvent = {
+  id: string
+  cohortId: string
+  name: string
+  category: EventCategory
+  status: EventStatus
+  description?: string
+  startDate: string
+  endDate: string
+  location?: string
+  leadDepartment: Department
+  organizers: string[]
+  budget?: number
+  coverColor?: string
+  photos?: EventPhoto[]
+  createdAt: string
+  updatedAt: string
+  createdBy: string
 }

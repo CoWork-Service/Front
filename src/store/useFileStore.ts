@@ -9,6 +9,7 @@ interface FileStore {
   renameFile: (id: string, newName: string, actor: string) => void
   deleteFile: (id: string) => void
   moveFile: (id: string, newParentId: string | undefined, actor: string) => void
+  updateFileEvent: (id: string, eventId: string | undefined) => void
 }
 
 export const useFileStore = create<FileStore>((set) => ({
@@ -84,5 +85,11 @@ export const useFileStore = create<FileStore>((set) => ({
           logs: [...f.logs, log],
         }
       }),
+    })),
+  updateFileEvent: (id, eventId) =>
+    set((state) => ({
+      files: state.files.map((f) =>
+        f.id === id ? { ...f, eventId, updatedAt: new Date().toISOString() } : f
+      ),
     })),
 }))
