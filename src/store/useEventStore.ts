@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import { events as initialEvents } from '../data/events'
-import type { DoworkEvent, EventPhoto, EventPhotoTag } from '../types'
+import type { CoworkEvent, EventPhoto, EventPhotoTag } from '../types'
 
 interface EventStore {
-  events: DoworkEvent[]
-  addEvent: (event: Omit<DoworkEvent, 'id' | 'createdAt' | 'updatedAt'>) => string
-  updateEvent: (id: string, data: Partial<DoworkEvent>) => void
+  events: CoworkEvent[]
+  addEvent: (event: Omit<CoworkEvent, 'id' | 'createdAt' | 'updatedAt'>) => string
+  updateEvent: (id: string, data: Partial<CoworkEvent>) => void
   deleteEvent: (id: string) => void
   addPhoto: (eventId: string, photo: { url: string; caption?: string; tag?: EventPhotoTag; uploadedBy: string }) => void
   deletePhoto: (eventId: string, photoId: string) => void

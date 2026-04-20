@@ -1,6 +1,6 @@
-import type { DoworkEvent } from '../types'
+import type { CoworkEvent } from '../types'
 
-export const events: DoworkEvent[] = [
+export const events: CoworkEvent[] = [
   {
     id: 'evt-1',
     cohortId: '1',

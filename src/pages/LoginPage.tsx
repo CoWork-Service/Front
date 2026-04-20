@@ -16,12 +16,12 @@ export default function LoginPage() {
       return
     }
     // 더미 로그인 처리
-    localStorage.setItem('dowork_auth', 'true')
+    localStorage.setItem('cowork_auth', 'true')
     navigate('/home')
   }
 
   const handleDemo = () => {
-    localStorage.setItem('dowork_auth', 'true')
+    localStorage.setItem('cowork_auth', 'true')
     navigate('/home')
   }
 

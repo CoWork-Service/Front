@@ -8,7 +8,7 @@ import { StatusBadge } from '../components/common/StatusBadge'
 import { Modal } from '../components/common/Modal'
 import { EmptyState } from '../components/common/EmptyState'
 import { useToast } from '../components/common/Toast'
-import type { DoworkEvent, EventStatus, EventCategory, Department } from '../types'
+import type { CoworkEvent, EventStatus, EventCategory, Department } from '../types'
 import { DEPARTMENTS } from '../types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -66,7 +66,7 @@ function formatBudget(amount: number) {
 
 // ── 행사 카드 ─────────────────────────────────────────────────────────────────
 
-function EventCard({ event }: { event: DoworkEvent }) {
+function EventCard({ event }: { event: CoworkEvent }) {
   const color = event.coverColor ?? 'blue'
   const borderClass = coverBorderMap[color] ?? 'border-l-blue-500'
   const textClass = coverTextMap[color] ?? 'text-blue-600'
@@ -113,7 +113,7 @@ function EventCard({ event }: { event: DoworkEvent }) {
 
 // ── 캘린더 뷰 ─────────────────────────────────────────────────────────────────
 
-function CalendarView({ events }: { events: DoworkEvent[] }) {
+function CalendarView({ events }: { events: CoworkEvent[] }) {
   const today = new Date()
   const [calYear, setCalYear] = useState(today.getFullYear())
   const [calMonth, setCalMonth] = useState(today.getMonth())
@@ -246,7 +246,7 @@ const DEFAULT_FORM: FormState = {
   coverColor: 'blue',
 }
 
-function toFormState(event: DoworkEvent): FormState {
+function toFormState(event: CoworkEvent): FormState {
   return {
     name: event.name,
     category: event.category,
@@ -265,7 +265,7 @@ function toFormState(event: DoworkEvent): FormState {
 interface EventModalProps {
   open: boolean
   onClose: () => void
-  editTarget: DoworkEvent | null
+  editTarget: CoworkEvent | null
   currentCohortId: string
 }
 
@@ -433,7 +433,7 @@ export default function EventsPage() {
   const [view, setView] = useState<'list' | 'calendar'>('list')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('')
   const [modalOpen, setModalOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<DoworkEvent | null>(null)
+  const [editTarget, setEditTarget] = useState<CoworkEvent | null>(null)
 
   const cohortEvents = useMemo(
     () => events.filter((e) => e.cohortId === currentCohortId),

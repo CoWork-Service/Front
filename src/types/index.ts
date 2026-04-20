@@ -278,7 +278,7 @@ export type EventPhoto = {
   uploadedAt: string
 }
 
-export type DoworkEvent = {
+export type CoworkEvent = {
   id: string
   cohortId: string
   name: string

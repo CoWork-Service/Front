@@ -28,7 +28,7 @@ import EventDetailPage from './pages/EventDetailPage'
 import MobileRegisterPage from './pages/MobileRegisterPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const isAuth = localStorage.getItem('dowork_auth') === 'true'
+  const isAuth = localStorage.getItem('cowork_auth') === 'true'
   if (!isAuth) return <Navigate to="/login" replace />
   return <>{children}</>
 }
