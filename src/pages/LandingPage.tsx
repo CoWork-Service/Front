@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, FolderOpen, Wallet, Package, Users, ClipboardList, CalendarClock, CheckCircle, CalendarDays, Building2, MapPin, Flag } from 'lucide-react'
+import logoUrl from '../assets/logo.png'
 
 const features = [
   { icon: <CalendarDays size={20} />, label: '행사 관리' },
@@ -26,9 +27,7 @@ export default function LandingPage() {
       {/* 네비게이션 */}
       <nav className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">Co</span>
-          </div>
+          <img src={logoUrl} alt="CoWork 로고" className="w-8 h-8 rounded-lg object-contain shrink-0" />
           <span className="font-bold text-slate-900">CoWork</span>
         </div>
         <Link
@@ -86,9 +85,7 @@ export default function LandingPage() {
             <div className="card p-6 shadow-xl">
               {/* 목업 헤더 */}
               <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
-                <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">Co</span>
-                </div>
+                <img src={logoUrl} alt="CoWork 로고" className="w-7 h-7 rounded-md object-contain shrink-0" />
                 <span className="text-sm font-semibold text-slate-700">CoWork</span>
                 <span className="ml-auto text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">2026 기수</span>
               </div>

@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ShieldCheck,
 } from 'lucide-react'
+import logoUrl from '../../assets/logo.png'
 
 const mainNavItems = [
   { to: '/home', label: '홈', icon: <Home size={18} /> },
@@ -53,9 +54,7 @@ export function Sidebar() {
       {/* 로고 */}
       <div className="px-5 py-5 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">두</span>
-          </div>
+          <img src={logoUrl} alt="CoWork 로고" className="w-9 h-9 rounded-lg object-contain shrink-0" />
           <div>
             <p className="font-bold text-slate-900 text-sm leading-tight">CoWork</p>
             <p className="text-xs text-slate-400 leading-tight">학생회 행정 플랫폼</p>

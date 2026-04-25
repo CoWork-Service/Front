@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Lock, User } from 'lucide-react'
+import logoUrl from '../assets/logo.png'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -30,9 +31,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* 로고 */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-blue-600 items-center justify-center mb-3">
-            <span className="text-white font-bold text-2xl">두</span>
-          </div>
+          <img src={logoUrl} alt="CoWork 로고" className="w-24 h-24 mx-auto object-contain mb-3" />
           <h1 className="text-xl font-bold text-slate-900">CoWork</h1>
           <p className="text-sm text-slate-500 mt-1">학생회 행정 플랫폼</p>
         </div>
