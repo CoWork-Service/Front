@@ -11,11 +11,11 @@ const REQUIRED_FIELDS = ['학번', '이름', '학부/전공', '학년']
 
 // 더미 CSV 파싱 결과 시뮬레이션
 const dummyPreview: Omit<Student, 'id'>[] = [
-  { cohortId: 'import', studentId: '20261101', name: '김신입', department: '컴퓨터공학과', grade: 1, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261102', name: '이새내기', department: '경영학과', grade: 1, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261103', name: '박입학', department: '소프트웨어학과', grade: 1, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261104', name: '최등록', department: '전자공학과', grade: 2, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261105', name: '정대학', department: '경제학과', grade: 1, paymentStatus: 'unpaid' },
+  { cohortId: 'import', studentId: '20261101', name: '김신입', department: 'AI소프트웨어학부', grade: 1, paymentStatus: 'unpaid' },
+  { cohortId: 'import', studentId: '20261102', name: '이새내기', department: '소프트웨어학부', grade: 1, paymentStatus: 'unpaid' },
+  { cohortId: 'import', studentId: '20261103', name: '박입학', department: 'AI융합학부', grade: 1, paymentStatus: 'unpaid' },
+  { cohortId: 'import', studentId: '20261104', name: '최등록', department: 'AI소프트웨어학부', grade: 2, paymentStatus: 'unpaid' },
+  { cohortId: 'import', studentId: '20261105', name: '정대학', department: '소프트웨어학부', grade: 1, paymentStatus: 'unpaid' },
 ]
 
 const csvColumns = ['학번', '이름', '학부/전공', '학년', '이메일', '전화번호']
@@ -126,7 +126,7 @@ export default function StudentsImportPage() {
                   <tr key={col} className="border-b border-slate-100">
                     <td className="px-4 py-2.5 text-sm text-slate-800 font-mono">{col}</td>
                     <td className="px-4 py-2.5 text-xs text-slate-500">
-                      {col === '학번' ? '20261101' : col === '이름' ? '김신입' : col === '학년' ? '1' : col === '학부/전공' ? '컴퓨터공학과' : '-'}
+                      {col === '학번' ? '20261101' : col === '이름' ? '김신입' : col === '학년' ? '1' : col === '학부/전공' ? 'AI소프트웨어학부' : '-'}
                     </td>
                     <td className="px-4 py-2.5">
                       <select
