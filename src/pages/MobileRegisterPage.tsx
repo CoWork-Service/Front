@@ -23,7 +23,11 @@ type Step = 'photo' | 'ocr' | 'form' | 'done'
 
 function decodeToken(token: string): SessionData | null {
   try {
-    return JSON.parse(atob(token)) as SessionData
+    const normalized = token
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+    return JSON.parse(atob(padded)) as SessionData
   } catch {
     return null
   }

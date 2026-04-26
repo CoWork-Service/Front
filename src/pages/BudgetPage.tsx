@@ -202,6 +202,9 @@ export default function BudgetPage() {
 
   const generateQrSession = useCallback(() => {
     const token = btoa(JSON.stringify({ cohortId: currentCohortId, createdAt: Date.now() }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
     setQrToken(token)
     setQrRemaining(SESSION_TTL)
   }, [currentCohortId])
