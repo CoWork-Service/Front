@@ -34,7 +34,19 @@ import { SurveyStatusBadge, TimetableStatusBadge } from '../components/common/St
 import { Modal } from '../components/common/Modal'
 import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { useToast } from '../components/common/Toast'
-import type { EventStatus, EventPhoto, EventPhotoTag, FileItem, Expense, Survey, Timetable } from '../types'
+import type {
+  CoworkEvent,
+  Department,
+  EventCategory,
+  EventStatus,
+  EventPhoto,
+  EventPhotoTag,
+  FileItem,
+  Expense,
+  Survey,
+  Timetable,
+} from '../types'
+import { DEPARTMENTS } from '../types'
 
 // ── 상태 뱃지 헬퍼 ────────────────────────────────────────────────────────────
 
@@ -833,6 +845,198 @@ const coverBgMap: Record<string, string> = {
   red: 'bg-red-600',
 }
 
+const EVENT_CATEGORIES: EventCategory[] = ['OT', '정기총회', 'MT', '체육대회', '축제', '간담회', '기타']
+const EVENT_COVER_COLORS = ['blue', 'green', 'orange', 'purple', 'red']
+
+type EventEditFormState = {
+  name: string
+  category: EventCategory
+  status: EventStatus
+  startDate: string
+  endDate: string
+  location: string
+  leadDepartment: Department
+  organizers: string
+  budget: string
+  description: string
+  coverColor: string
+}
+
+function toEventEditFormState(event: CoworkEvent): EventEditFormState {
+  return {
+    name: event.name,
+    category: event.category,
+    status: event.status,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    location: event.location ?? '',
+    leadDepartment: event.leadDepartment,
+    organizers: event.organizers.join(', '),
+    budget: event.budget?.toString() ?? '',
+    description: event.description ?? '',
+    coverColor: event.coverColor ?? 'blue',
+  }
+}
+
+function EventEditModal({
+  open,
+  onClose,
+  event,
+}: {
+  open: boolean
+  onClose: () => void
+  event: CoworkEvent
+}) {
+  const { updateEvent } = useEventStore()
+  const toast = useToast()
+  const [form, setForm] = useState<EventEditFormState>(() => toEventEditFormState(event))
+
+  React.useEffect(() => {
+    if (open) setForm(toEventEditFormState(event))
+  }, [event, open])
+
+  const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const labelCls = 'block text-xs font-medium text-slate-600 mb-1'
+
+  function set(key: keyof EventEditFormState, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function handleSave() {
+    if (!form.name.trim()) { toast.error('행사명을 입력해주세요.'); return }
+    if (!form.startDate) { toast.error('시작일을 입력해주세요.'); return }
+    if (!form.endDate) { toast.error('종료일을 입력해주세요.'); return }
+    if (form.startDate > form.endDate) { toast.error('종료일은 시작일 이후여야 합니다.'); return }
+
+    const budget = form.budget ? Number(form.budget) : undefined
+    if (budget !== undefined && Number.isNaN(budget)) {
+      toast.error('계획 예산을 숫자로 입력해주세요.')
+      return
+    }
+
+    updateEvent(event.id, {
+      name: form.name.trim(),
+      category: form.category,
+      status: form.status,
+      startDate: form.startDate,
+      endDate: form.endDate,
+      location: form.location.trim() || undefined,
+      leadDepartment: form.leadDepartment,
+      organizers: form.organizers.split(',').map((s) => s.trim()).filter(Boolean),
+      budget,
+      description: form.description.trim() || undefined,
+      coverColor: form.coverColor,
+    })
+
+    toast.success('행사가 수정되었습니다.')
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="행사 수정"
+      size="lg"
+      footer={
+        <>
+          <button onClick={onClose} className="btn-secondary">
+            취소
+          </button>
+          <button onClick={handleSave} className="btn-primary">
+            저장
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className={labelCls}>행사명 <span className="text-red-500">*</span></label>
+          <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="예: 4월 정기총회" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>카테고리</label>
+            <select className={inputCls} value={form.category} onChange={(e) => set('category', e.target.value as EventCategory)}>
+              {EVENT_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>상태</label>
+            <select className={inputCls} value={form.status} onChange={(e) => set('status', e.target.value as EventStatus)}>
+              <option value="planning">기획중</option>
+              <option value="ongoing">진행중</option>
+              <option value="done">완료</option>
+              <option value="cancelled">취소</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>시작일 <span className="text-red-500">*</span></label>
+            <input type="date" className={inputCls} value={form.startDate} onChange={(e) => set('startDate', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>종료일 <span className="text-red-500">*</span></label>
+            <input type="date" className={inputCls} value={form.endDate} onChange={(e) => set('endDate', e.target.value)} />
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>장소</label>
+          <input className={inputCls} value={form.location} onChange={(e) => set('location', e.target.value)} placeholder="예: 공학관 세미나실 201호" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>주관부서</label>
+            <select className={inputCls} value={form.leadDepartment} onChange={(e) => set('leadDepartment', e.target.value as Department)}>
+              {DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>계획 예산 (원)</label>
+            <input type="number" className={inputCls} value={form.budget} onChange={(e) => set('budget', e.target.value)} placeholder="예: 300000" />
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>담당자 (쉼표로 구분)</label>
+          <input className={inputCls} value={form.organizers} onChange={(e) => set('organizers', e.target.value)} placeholder="예: 박지훈, 정다은" />
+        </div>
+
+        <div>
+          <label className={labelCls}>색상</label>
+          <div className="flex gap-2 mt-1">
+            {EVENT_COVER_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => set('coverColor', color)}
+                className={`w-7 h-7 rounded-full ${coverBgMap[color] ?? 'bg-blue-600'} border-2 transition-all ${form.coverColor === color ? 'border-slate-700 scale-110' : 'border-transparent'}`}
+                title={color}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>설명</label>
+          <textarea
+            className={`${inputCls} resize-none`}
+            rows={3}
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+            placeholder="행사에 대한 간략한 설명을 입력하세요."
+          />
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 export default function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
@@ -846,6 +1050,7 @@ export default function EventDetailPage() {
   const { currentCohortId } = useCohortStore()
 
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [editOpen, setEditOpen] = useState(false)
 
   const event = useMemo(() => events.find((e) => e.id === eventId), [events, eventId])
 
@@ -968,13 +1173,14 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          <Link
-            to="/events"
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 shrink-0"
           >
             <Pencil size={14} />
-            목록으로
-          </Link>
+            수정하기
+          </button>
         </div>
       </div>
 
@@ -1024,6 +1230,8 @@ export default function EventDetailPage() {
       )}
       {activeTab === 'surveys' && <SurveysTab surveys={eventSurveys} schedules={eventSchedules} />}
       {activeTab === 'meetings' && <MeetingsTab meetings={eventMeetings} />}
+
+      <EventEditModal open={editOpen} onClose={() => setEditOpen(false)} event={event} />
     </div>
   )
 }
