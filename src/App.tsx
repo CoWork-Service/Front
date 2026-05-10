@@ -1,10 +1,14 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { ToastProvider } from './components/common/Toast'
+import { hasAuthenticatedSession, hasSsoIdentity, needsOnboarding } from './lib/auth'
 
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import SsoCallbackPage from './pages/SsoCallbackPage'
+import OnboardingPage from './pages/OnboardingPage'
+import SsoStatusPage from './pages/SsoStatusPage'
 import HomePage from './pages/HomePage'
 import FilesPage from './pages/FilesPage'
 import BudgetPage from './pages/BudgetPage'
@@ -28,8 +32,17 @@ import EventDetailPage from './pages/EventDetailPage'
 import MobileRegisterPage from './pages/MobileRegisterPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const isAuth = localStorage.getItem('cowork_auth') === 'true'
-  if (!isAuth) return <Navigate to="/login" replace />
+  if (needsOnboarding()) return <Navigate to="/onboarding" replace />
+  if (!hasAuthenticatedSession()) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function RequireOnboarding({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+
+  if (!params.get('tempToken') && !hasSsoIdentity()) return <Navigate to="/login" replace />
+  if (!needsOnboarding() && hasAuthenticatedSession()) return <Navigate to="/home" replace />
   return <>{children}</>
 }
 
@@ -41,6 +54,18 @@ export default function App() {
           {/* 공개 라우트 */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/sso/callback" element={<SsoCallbackPage />} />
+          <Route path="/main" element={<SsoCallbackPage />} />
+          <Route
+            path="/onboarding"
+            element={
+              <RequireOnboarding>
+                <OnboardingPage />
+              </RequireOnboarding>
+            }
+          />
+          <Route path="/pending" element={<SsoStatusPage status="pending" />} />
+          <Route path="/rejected" element={<SsoStatusPage status="rejected" />} />
 
           {/* 설문 응답 (공개) */}
           <Route path="/surveys/:surveyId/respond" element={<SurveyRespondPage />} />

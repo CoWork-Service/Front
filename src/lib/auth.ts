@@ -1,0 +1,209 @@
+export type JoinStatus = 'ACTIVE' | 'PENDING' | 'REJECTED' | 'UNKNOWN'
+
+export type AuthUser = {
+  userId?: number | string
+  name?: string
+  email?: string | null
+  studentId?: string
+  department?: string | null
+  organizationId?: number | string
+  organizationName?: string
+  organizationDepartments?: string[]
+  role?: string
+  joinStatus?: JoinStatus
+}
+
+export type SsoProfile = {
+  studentId: string
+  name: string
+  department?: string | null
+  email?: string | null
+}
+
+type ApiResponse<T> = {
+  success?: boolean
+  data?: T
+  message?: string | null
+  code?: string | null
+}
+
+type TokenResponse = {
+  accessToken?: string | null
+  refreshToken?: string | null
+  userId?: number
+  name?: string
+  email?: string | null
+  joinStatus?: string
+}
+
+export const AUTH_KEYS = {
+  auth: 'cowork_auth',
+  accessToken: 'cowork_access_token',
+  refreshToken: 'cowork_refresh_token',
+  tempToken: 'cowork_sso_temp_token',
+  user: 'cowork_user',
+  onboardingRequired: 'cowork_onboarding_required',
+  onboardingStatus: 'cowork_onboarding_status',
+} as const
+
+export function getApiBaseUrl() {
+  return (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
+}
+
+export function buildSsoLoginUrl() {
+  const explicitUrl = import.meta.env.VITE_SSO_LOGIN_URL
+  if (explicitUrl) return explicitUrl
+
+  const apiReturnUrl = `${getApiBaseUrl()}/api/auth/sso/callback`
+  return `https://smartid.ssu.ac.kr/Symtra_sso/smln.asp?apiReturnUrl=${encodeURIComponent(apiReturnUrl)}`
+}
+
+export function normalizeJoinStatus(value?: string | null): JoinStatus {
+  const normalized = value?.toUpperCase()
+  if (normalized === 'ACTIVE' || normalized === 'PENDING' || normalized === 'REJECTED') return normalized
+  return 'UNKNOWN'
+}
+
+export function getStoredUser(): AuthUser | null {
+  const raw = localStorage.getItem(AUTH_KEYS.user)
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as AuthUser
+  } catch {
+    return null
+  }
+}
+
+export function hasAuthenticatedSession() {
+  return localStorage.getItem(AUTH_KEYS.auth) === 'true' && !needsOnboarding()
+}
+
+export function hasSsoIdentity() {
+  return Boolean(
+    localStorage.getItem(AUTH_KEYS.accessToken) ||
+      localStorage.getItem(AUTH_KEYS.tempToken) ||
+      getStoredUser(),
+  )
+}
+
+export function needsOnboarding() {
+  return localStorage.getItem(AUTH_KEYS.onboardingRequired) === 'true'
+}
+
+export function saveAuthSession({
+  accessToken,
+  refreshToken,
+  tempToken,
+  user,
+  authenticated,
+  onboardingRequired = false,
+  onboardingStatus,
+}: {
+  accessToken?: string | null
+  refreshToken?: string | null
+  tempToken?: string | null
+  user?: AuthUser | null
+  authenticated?: boolean
+  onboardingRequired?: boolean
+  onboardingStatus?: 'select' | 'pending' | 'rejected'
+}) {
+  if (accessToken) localStorage.setItem(AUTH_KEYS.accessToken, accessToken)
+  if (refreshToken) localStorage.setItem(AUTH_KEYS.refreshToken, refreshToken)
+  if (tempToken) localStorage.setItem(AUTH_KEYS.tempToken, tempToken)
+  if (user) localStorage.setItem(AUTH_KEYS.user, JSON.stringify(user))
+
+  const isAuthenticated =
+    authenticated ??
+    Boolean(accessToken && !onboardingRequired && user?.joinStatus !== 'PENDING' && user?.joinStatus !== 'REJECTED')
+
+  localStorage.setItem(AUTH_KEYS.auth, isAuthenticated ? 'true' : 'false')
+  localStorage.setItem(AUTH_KEYS.onboardingRequired, onboardingRequired ? 'true' : 'false')
+
+  if (onboardingStatus) {
+    localStorage.setItem(AUTH_KEYS.onboardingStatus, onboardingStatus)
+  } else if (!onboardingRequired) {
+    localStorage.removeItem(AUTH_KEYS.onboardingStatus)
+    localStorage.removeItem(AUTH_KEYS.tempToken)
+  }
+}
+
+export function clearAuthSession() {
+  Object.values(AUTH_KEYS).forEach((key) => localStorage.removeItem(key))
+}
+
+export function userFromToken(accessToken: string): AuthUser {
+  const payload = decodeJwtPayload(accessToken)
+  if (!payload) return {}
+
+  return {
+    userId: payload.userId ?? payload.id ?? payload.sub,
+    name: payload.name,
+    email: payload.email,
+    studentId: payload.studentId ?? payload.student_id ?? payload.studentNumber ?? payload.sIdno,
+    department: payload.department,
+    organizationId: payload.organizationId ?? payload.orgId,
+    organizationName: payload.organizationName ?? payload.orgName,
+    role: payload.role ?? payload.authority,
+    joinStatus: normalizeJoinStatus(payload.joinStatus),
+  }
+}
+
+export function parseBooleanParam(value: string | null) {
+  if (!value) return false
+  return ['1', 'true', 'yes', 'y'].includes(value.toLowerCase())
+}
+
+export async function fetchSsoProfile(tempToken: string): Promise<SsoProfile> {
+  const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/profile?tempToken=${encodeURIComponent(tempToken)}`)
+  const body = (await response.json()) as ApiResponse<SsoProfile>
+
+  if (!response.ok || body.success === false || !body.data) {
+    throw new Error(body.message || 'SSO 프로필을 불러오지 못했습니다.')
+  }
+
+  return body.data
+}
+
+export async function registerSsoUser(payload: {
+  tempToken: string
+  email?: string | null
+  councilMember: boolean
+  cohortLabel?: string
+  department?: string | null
+  organizationName?: string
+  inviteCode?: string
+  departments?: string[]
+}): Promise<TokenResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = (await response.json()) as ApiResponse<TokenResponse>
+
+  if (!response.ok || body.success === false || !body.data) {
+    throw new Error(body.message || '가입 처리에 실패했습니다.')
+  }
+
+  return body.data
+}
+
+function decodeJwtPayload(token: string): Record<string, any> | null {
+  const [, payload] = token.split('.')
+  if (!payload) return null
+
+  try {
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=')
+    const json = decodeURIComponent(
+      atob(padded)
+        .split('')
+        .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+        .join(''),
+    )
+    return JSON.parse(json) as Record<string, any>
+  } catch {
+    return null
+  }
+}

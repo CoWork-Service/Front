@@ -1,12 +1,16 @@
 import React from 'react'
 import { Bell, User } from 'lucide-react'
 import { CohortSelector } from './CohortSelector'
+import { getStoredUser } from '../../lib/auth'
 
 interface TopHeaderProps {
   pageTitle?: string
 }
 
 export function TopHeader({ pageTitle }: TopHeaderProps) {
+  const user = getStoredUser()
+  const userName = user?.name || '사용자'
+
   return (
     <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-20">
       <div className="flex items-center gap-3">
@@ -26,7 +30,7 @@ export function TopHeader({ pageTitle }: TopHeaderProps) {
           <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center">
             <User size={14} className="text-white" />
           </div>
-          <span className="text-sm font-medium text-slate-700">김민준</span>
+          <span className="text-sm font-medium text-slate-700">{userName}</span>
         </button>
       </div>
     </header>
