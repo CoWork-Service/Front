@@ -10,11 +10,18 @@ import { DepartmentTag } from '../components/common/DepartmentTag'
 import { EmptyState } from '../components/common/EmptyState'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
+import { apiRequest } from '../lib/api'
 import { DEPARTMENTS } from '../types'
 import type { Expense, Department, BudgetCategory, PaymentMethod, EventPhoto } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
+
+type MobileSessionResponse = {
+  sessionToken: string
+  qrUrl: string
+  expiresAt: string
+}
 
 const defaultForm = {
   date: '',
@@ -196,37 +203,45 @@ export default function BudgetPage() {
   const [evidenceExpense, setEvidenceExpense] = useState<{ expense: Expense; showOnly: 'receipt' | 'photos' } | null>(null)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrToken, setQrToken] = useState('')
+  const [qrExpiresAt, setQrExpiresAt] = useState<string | null>(null)
   const [qrRemaining, setQrRemaining] = useState(0)
+  const [qrLoading, setQrLoading] = useState(false)
 
-  const SESSION_TTL = 5 * 60 * 1000
-
-  const generateQrSession = useCallback(() => {
-    const token = btoa(JSON.stringify({ cohortId: currentCohortId, createdAt: Date.now() }))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
-    setQrToken(token)
-    setQrRemaining(SESSION_TTL)
-  }, [currentCohortId])
+  const generateQrSession = useCallback(async () => {
+    setQrLoading(true)
+    try {
+      const session = await apiRequest<MobileSessionResponse>('/api/mobile/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ cohortId: Number(currentCohortId) }),
+      })
+      setQrToken(session.sessionToken)
+      setQrExpiresAt(session.expiresAt)
+      setQrRemaining(Math.max(0, new Date(session.expiresAt).getTime() - Date.now()))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '모바일 세션 생성에 실패했습니다.')
+    } finally {
+      setQrLoading(false)
+    }
+  }, [currentCohortId, toast])
 
   const openQr = () => {
-    generateQrSession()
     setQrOpen(true)
+    void generateQrSession()
   }
 
   useEffect(() => {
-    if (!qrOpen) return
+    if (!qrOpen || !qrExpiresAt) return
     const id = setInterval(() => {
       setQrRemaining((prev) => {
-        const next = Math.max(0, prev - 1000)
+        const next = Math.max(0, new Date(qrExpiresAt).getTime() - Date.now())
         if (next === 0) {
-          generateQrSession() // 만료되면 자동 갱신
+          void generateQrSession()
         }
         return next
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [qrOpen, generateQrSession])
+  }, [qrOpen, qrExpiresAt, generateQrSession])
 
   const cohortExpenses = useMemo(
     () => expenses.filter((e) => e.cohortId === currentCohortId),
@@ -594,7 +609,11 @@ export default function BudgetPage() {
 
           {/* QR 코드 */}
           <div className="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm">
-            {qrToken && (
+            {qrLoading ? (
+              <div className="w-[180px] h-[180px] flex items-center justify-center text-xs text-slate-400">
+                세션 생성 중
+              </div>
+            ) : qrToken && (
               <QRCodeSVG
                 value={`${window.location.origin}/budget/mobile-register/${qrToken}`}
                 size={180}

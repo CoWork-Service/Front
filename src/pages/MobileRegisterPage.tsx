@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Camera, ImagePlus, ChevronRight, CheckCircle, AlertCircle, Loader2, Receipt } from 'lucide-react'
-import { useBudgetStore } from '../store/useBudgetStore'
-import type { BudgetCategory, PaymentMethod, Department } from '../types'
+import { apiRequest } from '../lib/api'
+import type { BudgetCategory, PaymentMethod } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
-
-const SESSION_TTL = 5 * 60 * 1000
 
 // OCR 시뮬레이션 샘플
 const OCR_SAMPLES = [
@@ -18,19 +16,14 @@ const OCR_SAMPLES = [
   { vendor: '다이소', amount: 8900, category: '소모품' as BudgetCategory, description: '행사 용품' },
 ]
 
-type SessionData = { cohortId: string; createdAt: number }
 type Step = 'photo' | 'ocr' | 'form' | 'done'
 
-function decodeToken(token: string): SessionData | null {
-  try {
-    const normalized = token
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    return JSON.parse(atob(padded)) as SessionData
-  } catch {
-    return null
-  }
+type MobileSessionStatus = {
+  sessionToken: string
+  used: boolean
+  expired: boolean
+  expenseId?: number | null
+  expiresAt: string
 }
 
 function formatRemaining(ms: number) {
@@ -42,31 +35,18 @@ function formatRemaining(ms: number) {
 
 export default function MobileRegisterPage() {
   const { token } = useParams<{ token: string }>()
-  const { addExpense } = useBudgetStore()
-
-  const session = token ? decodeToken(token) : null
-
-  const [isExpired, setIsExpired] = useState(() => {
-    if (!session) return true
-    return Date.now() - session.createdAt > SESSION_TTL
-  })
-  const [remaining, setRemaining] = useState(() => {
-    if (!session) return 0
-    return Math.max(0, SESSION_TTL - (Date.now() - session.createdAt))
-  })
-
-  useEffect(() => {
-    if (!session || isExpired) return
-    const id = setInterval(() => {
-      const left = Math.max(0, SESSION_TTL - (Date.now() - session.createdAt))
-      setRemaining(left)
-      if (left === 0) setIsExpired(true)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [session, isExpired])
+  const [session, setSession] = useState<MobileSessionStatus | null>(null)
+  const [sessionLoading, setSessionLoading] = useState(true)
+  const [sessionError, setSessionError] = useState('')
+  const [isExpired, setIsExpired] = useState(false)
+  const [remaining, setRemaining] = useState(0)
 
   const [step, setStep] = useState<Step>('photo')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [uploaded, setUploaded] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
 
@@ -81,11 +61,53 @@ export default function MobileRegisterPage() {
     note: '',
   })
 
+  useEffect(() => {
+    if (!token) {
+      setSessionError('유효하지 않은 모바일 세션입니다.')
+      setSessionLoading(false)
+      return
+    }
+
+    let cancelled = false
+    apiRequest<MobileSessionStatus>(`/api/mobile/sessions/${token}`)
+      .then((data) => {
+        if (cancelled) return
+        setSession(data)
+        setIsExpired(data.expired)
+        setRemaining(Math.max(0, new Date(data.expiresAt).getTime() - Date.now()))
+        if (data.expenseId) setStep('done')
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setSessionError(error instanceof Error ? error.message : '세션을 확인하지 못했습니다.')
+      })
+      .finally(() => {
+        if (!cancelled) setSessionLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (!session || isExpired) return
+    const id = setInterval(() => {
+      const left = Math.max(0, new Date(session.expiresAt).getTime() - Date.now())
+      setRemaining(left)
+      if (left === 0) setIsExpired(true)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [session, isExpired])
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const url = URL.createObjectURL(file)
+    setSubmitError('')
+    setImageFile(file)
     setImageUrl(url)
+    setUploaded(false)
     setStep('ocr')
     setTimeout(() => {
       const sample = OCR_SAMPLES[Math.floor(Math.random() * OCR_SAMPLES.length)]
@@ -102,33 +124,67 @@ export default function MobileRegisterPage() {
     }, 2000)
   }
 
-  const handleSubmit = () => {
-    if (!session) return
-    addExpense({
-      cohortId: session.cohortId,
-      date: form.date,
-      department: '기타' as Department,
-      category: (form.category || '기타') as BudgetCategory,
-      vendor: form.vendor,
-      description: form.description,
-      amount: Number(String(form.amount).replace(/,/g, '')),
-      paymentMethod: (form.paymentMethod || '개인카드') as PaymentMethod,
-      receiptUrl: imageUrl ?? undefined,
-      note: form.note || undefined,
-    })
-    setStep('done')
+  const handleSubmit = async () => {
+    if (!token || !imageFile) return
+    const amount = Number(String(form.amount).replace(/,/g, ''))
+    if (!form.date || !form.vendor || !amount || amount <= 0) {
+      setSubmitError('날짜, 거래처, 금액을 확인해 주세요.')
+      return
+    }
+
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      if (!uploaded) {
+        const uploadBody = new FormData()
+        uploadBody.append('photo', imageFile)
+        await apiRequest(`/api/mobile/sessions/${token}/upload`, {
+          method: 'POST',
+          body: uploadBody,
+        })
+        setUploaded(true)
+      }
+
+      await apiRequest(`/api/mobile/sessions/${token}/expense`, {
+        method: 'POST',
+        body: JSON.stringify({
+          date: form.date,
+          department: '기타',
+          category: form.category || '기타',
+          vendor: form.vendor,
+          description: form.description,
+          amount,
+          paymentMethod: form.paymentMethod || '개인카드',
+          note: form.note || undefined,
+        }),
+      })
+      setStep('done')
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : '지출 등록에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // ── 세션 만료 / 유효하지 않음 ────────────────────────────────────────────────
-  if (!session || isExpired) {
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 text-center">
+        <Loader2 size={32} className="text-blue-500 animate-spin mb-4" />
+        <p className="text-sm text-slate-500">세션 확인 중...</p>
+      </div>
+    )
+  }
+
+  if (!session || isExpired || sessionError) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 text-center">
         <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
           <AlertCircle size={32} className="text-red-500" />
         </div>
-        <h1 className="text-lg font-bold text-slate-800 mb-2">세션이 만료되었습니다</h1>
+        <h1 className="text-lg font-bold text-slate-800 mb-2">{sessionError ? '세션을 확인할 수 없습니다' : '세션이 만료되었습니다'}</h1>
         <p className="text-sm text-slate-500 leading-relaxed">
-          QR코드 유효 시간(5분)이 지났습니다.<br />
+          {sessionError || 'QR코드 유효 시간(5분)이 지났습니다.'}<br />
           PC에서 새 QR코드를 생성해 주세요.
         </p>
       </div>
@@ -356,21 +412,27 @@ export default function MobileRegisterPage() {
 
         {/* 다시 촬영 */}
         <button
-          onClick={() => { setStep('photo'); setImageUrl(null) }}
+          onClick={() => { setStep('photo'); setImageUrl(null); setImageFile(null); setUploaded(false); setSubmitError('') }}
           className="w-full text-xs text-slate-400 hover:text-slate-600 underline text-center py-1"
         >
           영수증 다시 촬영하기
         </button>
+
+        {submitError && (
+          <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 leading-relaxed">
+            {submitError}
+          </div>
+        )}
       </div>
 
       {/* 제출 버튼 */}
       <div className="px-5 pt-3 pb-10 bg-slate-50 border-t border-slate-100 shrink-0">
         <button
           onClick={handleSubmit}
-          disabled={!form.vendor || !form.amount || !form.date}
+          disabled={submitting || !imageFile || !form.vendor || !form.amount || !form.date}
           className="w-full py-4 rounded-2xl bg-blue-600 text-white font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed active:bg-blue-700 transition-colors shadow-sm"
         >
-          제출하기
+          {submitting ? '제출 중...' : '제출하기'}
         </button>
       </div>
     </div>
