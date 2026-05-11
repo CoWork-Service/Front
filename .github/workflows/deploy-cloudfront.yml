@@ -1,0 +1,97 @@
+name: Deploy CloudFront
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudfront
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-2
+  S3_BUCKET: cowork-front-demo
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployment secrets
+        id: deployment_secrets
+        shell: bash
+        run: |
+          missing=()
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then missing+=("AWS_ACCESS_KEY_ID"); fi
+          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then missing+=("AWS_SECRET_ACCESS_KEY"); fi
+          if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then missing+=("CLOUDFRONT_DISTRIBUTION_ID"); fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::warning::Skipping CloudFront deployment. Missing secrets: ${missing[*]}"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$VITE_API_BASE_URL" ]; then
+            echo "::warning::VITE_API_BASE_URL is empty. The frontend will use its local default API URL."
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Build
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        run: npm run build
+
+      - name: Configure AWS credentials
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload immutable assets to S3
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        run: |
+          aws s3 sync dist/ "s3://${S3_BUCKET}" \
+            --delete \
+            --exclude "index.html" \
+            --cache-control "public,max-age=31536000,immutable"
+
+      - name: Upload index.html to S3
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        run: |
+          aws s3 cp dist/index.html "s3://${S3_BUCKET}/index.html" \
+            --content-type "text/html; charset=utf-8" \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Invalidate CloudFront cache
+        if: steps.deployment_secrets.outputs.ready == 'true'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*"
