@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ShieldCheck, Edit2, Check, Search } from 'lucide-react'
+import { ShieldCheck, Edit2, Check, Search, KeyRound, Copy, RefreshCw } from 'lucide-react'
 import { PageHeader } from '../components/common/PageHeader'
 import { DepartmentTag } from '../components/common/DepartmentTag'
 import { Modal } from '../components/common/Modal'
@@ -31,6 +31,10 @@ type ApiMember = {
   joinedAt?: string | null
 }
 
+type InviteResponse = {
+  inviteCode: string
+}
+
 type Member = {
   id: string
   userId: string
@@ -54,6 +58,9 @@ export default function OrgPage() {
   const [permFilter, setPermFilter] = useState('')
   const [editTarget, setEditTarget] = useState<Member | null>(null)
   const [editForm, setEditForm] = useState(defaultEditForm)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteCode, setInviteCode] = useState('')
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false)
 
   useEffect(() => {
     if (!currentCohortId || requestedCohortId.current === currentCohortId) return
@@ -107,11 +114,40 @@ export default function OrgPage() {
     }
   }
 
+  const handleGenerateInvite = async () => {
+    setIsGeneratingInvite(true)
+    try {
+      const response = await apiRequest<InviteResponse>('/api/org/invite', { method: 'POST' })
+      setInviteCode(response.inviteCode)
+      toast.success('초대코드가 발급되었습니다.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '초대코드 발급에 실패했습니다.')
+    } finally {
+      setIsGeneratingInvite(false)
+    }
+  }
+
+  const handleCopyInvite = async () => {
+    if (!inviteCode) return
+    try {
+      await navigator.clipboard.writeText(inviteCode)
+      toast.success('초대코드가 복사되었습니다.')
+    } catch {
+      toast.error('초대코드를 복사하지 못했습니다.')
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="조직 관리"
         description="멤버별 부서와 권한을 설정합니다."
+        actions={
+          <button onClick={() => setInviteOpen(true)} className="btn-secondary">
+            <KeyRound size={16} />
+            초대코드
+          </button>
+        }
       />
 
       <div className="grid grid-cols-4 gap-4 mb-6">
@@ -200,6 +236,42 @@ export default function OrgPage() {
           </tbody>
         </table>
       </div>
+
+      <Modal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        title="초대코드 발급"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setInviteOpen(false)} className="btn-secondary">닫기</button>
+            {inviteCode && (
+              <button onClick={handleCopyInvite} className="btn-secondary">
+                <Copy size={14} />
+                복사
+              </button>
+            )}
+            <button onClick={handleGenerateInvite} className="btn-primary" disabled={isGeneratingInvite}>
+              <RefreshCw size={14} className={isGeneratingInvite ? 'animate-spin' : ''} />
+              {inviteCode ? '재발급' : '발급'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            새 초대코드를 발급하면 기존 초대코드는 더 이상 사용할 수 없습니다.
+          </p>
+          <div>
+            <label className="label">현재 발급된 초대코드</label>
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <span className="font-mono text-lg font-semibold text-slate-900">
+                {inviteCode || '발급 전'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={!!editTarget}
