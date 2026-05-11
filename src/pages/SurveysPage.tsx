@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Copy, BarChart2, Edit2, Trash2, ClipboardList, CalendarDays } from 'lucide-react'
+import { Plus, Copy, BarChart2, Edit2, Trash2, ClipboardList, CalendarDays, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSurveyStore } from '../store/useSurveyStore'
 import { useCohortStore } from '../store/useCohortStore'
@@ -24,6 +24,7 @@ export default function SurveysPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [eventFilter, setEventFilter] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
 
   const cohortSurveys = useMemo(
     () => surveys.filter((s) => s.cohortId === currentCohortId),
@@ -40,7 +41,22 @@ export default function SurveysPage() {
 
   const copyLink = (id: string) => {
     const url = `${window.location.origin}/surveys/${id}/respond`
-    navigator.clipboard.writeText(url).then(() => toast.success('응답 링크가 복사되었습니다.'))
+    navigator.clipboard
+      .writeText(url)
+      .then(() => toast.success('응답 링크가 복사되었습니다.'))
+      .catch(() => toast.error('링크 복사에 실패했습니다.'))
+  }
+
+  const handleStatusChange = async (id: string, nextStatus: 'open' | 'closed') => {
+    setUpdatingStatusId(id)
+    try {
+      await updateStatus(id, nextStatus)
+      toast.success(nextStatus === 'open' ? '설문이 공개되었습니다.' : '설문이 마감되었습니다.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '설문 상태 변경에 실패했습니다.')
+    } finally {
+      setUpdatingStatusId(null)
+    }
   }
 
   return (
@@ -121,13 +137,25 @@ export default function SurveysPage() {
                     <button onClick={() => copyLink(survey.id)} className="btn-secondary py-1.5 text-xs">
                       <Copy size={13} />링크 복사
                     </button>
-                    <button onClick={() => { updateStatus(survey.id, 'closed'); toast.success('설문이 마감되었습니다.') }} className="btn-secondary py-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => { void handleStatusChange(survey.id, 'closed') }}
+                      className="btn-secondary py-1.5 text-xs"
+                      disabled={updatingStatusId === survey.id}
+                    >
+                      {updatingStatusId === survey.id ? <Loader2 size={13} className="animate-spin" /> : null}
                       마감
                     </button>
                   </>
                 )}
                 {survey.status === 'draft' && (
-                  <button onClick={() => { updateStatus(survey.id, 'open'); toast.success('설문이 공개되었습니다.') }} className="btn-primary py-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { void handleStatusChange(survey.id, 'open') }}
+                    className="btn-primary py-1.5 text-xs"
+                    disabled={updatingStatusId === survey.id}
+                  >
+                    {updatingStatusId === survey.id ? <Loader2 size={13} className="animate-spin" /> : null}
                     공개
                   </button>
                 )}

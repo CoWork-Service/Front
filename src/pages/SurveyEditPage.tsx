@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Save } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Save, Loader2 } from 'lucide-react'
 import { useSurveyStore } from '../store/useSurveyStore'
 import { useCohortStore } from '../store/useCohortStore'
 import { useEventStore } from '../store/useEventStore'
@@ -68,7 +68,16 @@ function QuestionCard({ question, index, total, onChange, onDelete, onMoveUp, on
             />
             <select
               value={question.type}
-              onChange={(e) => onChange(question.id, { type: e.target.value as QuestionType, options: hasOptions ? question.options : undefined })}
+              onChange={(e) => {
+                const nextType = e.target.value as QuestionType
+                const nextHasOptions = ['multiple_choice', 'checkbox', 'dropdown'].includes(nextType)
+                onChange(question.id, {
+                  type: nextType,
+                  options: nextHasOptions
+                    ? (question.options?.length ? question.options : [{ id: nextDraftId('o'), text: '' }])
+                    : undefined,
+                })
+              }}
               className="select-input w-32"
             >
               {Object.entries(TYPE_LABELS).map(([v, l]) => (
@@ -106,25 +115,25 @@ function QuestionCard({ question, index, total, onChange, onDelete, onMoveUp, on
                     placeholder={`선택지 ${i + 1}`}
                     className="input flex-1 text-sm py-1.5"
                   />
-                  <button onClick={() => removeOption(opt.id)} className="text-slate-400 hover:text-red-500">
+                  <button type="button" onClick={() => removeOption(opt.id)} className="text-slate-400 hover:text-red-500">
                     <Trash2 size={13} />
                   </button>
                 </div>
               ))}
-              <button onClick={addOption} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+              <button type="button" onClick={addOption} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                 <Plus size={12} />선택지 추가
               </button>
             </div>
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <button onClick={() => onMoveUp(question.id)} disabled={index === 0} className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30">
+          <button type="button" onClick={() => onMoveUp(question.id)} disabled={index === 0} className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30">
             <ChevronUp size={14} />
           </button>
-          <button onClick={() => onMoveDown(question.id)} disabled={index === total - 1} className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30">
+          <button type="button" onClick={() => onMoveDown(question.id)} disabled={index === total - 1} className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30">
             <ChevronDown size={14} />
           </button>
-          <button onClick={() => onDelete(question.id)} className="p-1 rounded text-slate-400 hover:text-red-500">
+          <button type="button" onClick={() => onDelete(question.id)} className="p-1 rounded text-slate-400 hover:text-red-500">
             <Trash2 size={14} />
           </button>
         </div>
@@ -136,20 +145,38 @@ function QuestionCard({ question, index, total, onChange, onDelete, onMoveUp, on
 export default function SurveyEditPage() {
   const { surveyId } = useParams<{ surveyId: string }>()
   const navigate = useNavigate()
-  const { surveys, addSurvey, updateSurvey, updateStatus } = useSurveyStore()
+  const { surveys, addSurvey, updateSurvey, updateStatus, loadSurveyDetail } = useSurveyStore()
   const { currentCohortId } = useCohortStore()
   const { events } = useEventStore()
   const toast = useToast()
+  const requestedSurveyId = useRef<string | null>(null)
 
-  const cohortEvents = events.filter((e) => e.cohortId === currentCohortId)
+  const cohortEvents = useMemo(() => events.filter((e) => e.cohortId === currentCohortId), [events, currentCohortId])
 
-  const isNew = surveyId === 'new'
-  const existing = surveys.find((s) => s.id === surveyId)
+  const isNew = !surveyId || surveyId === 'new'
+  const existing = isNew ? undefined : surveys.find((s) => s.id === surveyId)
 
   const [title, setTitle] = useState(existing?.title ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
   const [eventId, setEventId] = useState(existing?.eventId ?? '')
   const [questions, setQuestions] = useState<Question[]>(existing?.questions ?? [])
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (isNew || !surveyId || existing || requestedSurveyId.current === surveyId) return
+    requestedSurveyId.current = surveyId
+    void loadSurveyDetail(surveyId).catch((error) => {
+      toast.error(error instanceof Error ? error.message : '설문을 불러오지 못했습니다.')
+    })
+  }, [existing, isNew, loadSurveyDetail, surveyId, toast])
+
+  useEffect(() => {
+    if (!existing) return
+    setTitle(existing.title)
+    setDescription(existing.description ?? '')
+    setEventId(existing.eventId ?? '')
+    setQuestions(existing.questions)
+  }, [existing])
 
   const addQuestion = (type: QuestionType = 'short_text') => {
     const newQ: Question = {
@@ -191,6 +218,30 @@ export default function SurveyEditPage() {
 
   const handleSave = async (publish = false) => {
     if (!title.trim()) { toast.error('설문 제목을 입력해주세요.'); return }
+    if (!currentCohortId) { toast.error('기수 정보를 불러온 뒤 다시 시도해주세요.'); return }
+
+    const nextQuestions = questions.map((question, index) => ({
+      ...question,
+      order: index + 1,
+      title: question.title.trim(),
+      options: question.options
+        ?.map((option) => ({ ...option, text: option.text.trim() }))
+        .filter((option) => option.text),
+    }))
+
+    if (nextQuestions.some((question) => !question.title)) {
+      toast.error('문항 제목을 입력해주세요.')
+      return
+    }
+
+    if (nextQuestions.some((question) => (
+      ['multiple_choice', 'checkbox', 'dropdown'].includes(question.type) && !question.options?.length
+    ))) {
+      toast.error('선택형 문항에는 선택지를 1개 이상 입력해주세요.')
+      return
+    }
+
+    setIsSaving(true)
     if (isNew) {
       try {
         const id = await addSurvey({
@@ -198,7 +249,7 @@ export default function SurveyEditPage() {
           title: title.trim(),
           description: description.trim(),
           status: publish ? 'open' : 'draft',
-          questions,
+          questions: nextQuestions,
           createdBy: '김민준',
           eventId: eventId || undefined,
         })
@@ -207,15 +258,27 @@ export default function SurveyEditPage() {
         navigate(`/surveys/${id}/edit`)
       } catch (error) {
         toast.error(error instanceof Error ? error.message : '설문 저장에 실패했습니다.')
+      } finally {
+        setIsSaving(false)
       }
     } else if (existing) {
       try {
-        await updateSurvey(existing.id, { title, description, questions, eventId: eventId || undefined })
+        await updateSurvey(existing.id, {
+          title: title.trim(),
+          description: description.trim(),
+          questions: nextQuestions,
+          eventId: eventId || undefined,
+        })
         if (publish) await updateStatus(existing.id, 'open')
         toast.success(publish ? '설문이 공개되었습니다.' : '저장되었습니다.')
       } catch (error) {
         toast.error(error instanceof Error ? error.message : '설문 저장에 실패했습니다.')
+      } finally {
+        setIsSaving(false)
       }
+    } else {
+      toast.error('설문 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+      setIsSaving(false)
     }
   }
 
@@ -226,10 +289,11 @@ export default function SurveyEditPage() {
         actions={
           <div className="flex gap-2">
             <Link to="/surveys" className="btn-secondary">취소</Link>
-            <button onClick={() => handleSave(false)} className="btn-secondary">
-              <Save size={15} />임시 저장
+            <button type="button" onClick={() => handleSave(false)} className="btn-secondary" disabled={isSaving}>
+              {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              임시 저장
             </button>
-            <button onClick={() => handleSave(true)} className="btn-primary">
+            <button type="button" onClick={() => handleSave(true)} className="btn-primary" disabled={isSaving}>
               공개
             </button>
           </div>
@@ -288,6 +352,7 @@ export default function SurveyEditPage() {
           {Object.entries(TYPE_LABELS).map(([type, label]) => (
             <button
               key={type}
+              type="button"
               onClick={() => addQuestion(type as QuestionType)}
               className="btn-secondary py-1.5 text-xs"
             >
