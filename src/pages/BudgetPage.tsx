@@ -23,6 +23,46 @@ type MobileSessionResponse = {
   expiresAt: string
 }
 
+type MobileUploadResponse = {
+  expenseId?: number | null
+}
+
+type ApiExpense = {
+  id: number
+  cohortId: number
+  date: string
+  department: Department
+  category: string
+  vendor: string
+  description?: string | null
+  amount: number
+  paymentMethod: string
+  receiptUrl?: string | null
+  photoIds?: number[]
+  note?: string | null
+  eventId?: number | null
+  createdAt: string
+}
+
+function toExpense(apiExpense: ApiExpense): Expense {
+  return {
+    id: String(apiExpense.id),
+    cohortId: String(apiExpense.cohortId),
+    date: apiExpense.date,
+    department: apiExpense.department,
+    category: apiExpense.category as BudgetCategory,
+    vendor: apiExpense.vendor,
+    description: apiExpense.description ?? '',
+    amount: apiExpense.amount,
+    paymentMethod: apiExpense.paymentMethod as PaymentMethod,
+    receiptUrl: apiExpense.receiptUrl ?? undefined,
+    photoIds: apiExpense.photoIds?.map(String),
+    note: apiExpense.note ?? undefined,
+    createdAt: apiExpense.createdAt,
+    eventId: apiExpense.eventId ? String(apiExpense.eventId) : undefined,
+  }
+}
+
 const defaultForm = {
   date: '',
   department: '' as Department | '',
@@ -183,7 +223,7 @@ function PhotoPicker({
 
 export default function BudgetPage() {
   const { currentCohortId } = useCohortStore()
-  const { expenses, addExpense, updateExpense, deleteExpense } = useBudgetStore()
+  const { expenses, addExpense, upsertExpense, updateExpense, deleteExpense } = useBudgetStore()
   const { events } = useEventStore()
   const toast = useToast()
 
@@ -242,6 +282,24 @@ export default function BudgetPage() {
     }, 1000)
     return () => clearInterval(id)
   }, [qrOpen, qrExpiresAt, generateQrSession])
+
+  useEffect(() => {
+    if (!qrOpen || !qrToken) return
+    const id = setInterval(() => {
+      void apiRequest<MobileUploadResponse>(`/api/mobile/sessions/${qrToken}/result`)
+        .then(async (result) => {
+          if (!result.expenseId) return
+          const expense = await apiRequest<ApiExpense>(`/api/expenses/${result.expenseId}`)
+          upsertExpense(toExpense(expense))
+          toast.success('모바일 지출 등록이 완료되었습니다.')
+          setQrOpen(false)
+        })
+        .catch(() => {
+          // 세션 폴링 실패는 다음 주기에 재시도한다.
+        })
+    }, 2500)
+    return () => clearInterval(id)
+  }, [qrOpen, qrToken, toast, upsertExpense])
 
   const cohortExpenses = useMemo(
     () => expenses.filter((e) => e.cohortId === currentCohortId),

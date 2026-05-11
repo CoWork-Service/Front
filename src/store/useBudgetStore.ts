@@ -5,6 +5,7 @@ import type { Expense } from '../types'
 interface BudgetStore {
   expenses: Expense[]
   addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void
+  upsertExpense: (expense: Expense) => void
   updateExpense: (id: string, data: Partial<Expense>) => void
   deleteExpense: (id: string) => void
 }
@@ -22,6 +23,15 @@ export const useBudgetStore = create<BudgetStore>((set) => ({
         },
       ],
     })),
+  upsertExpense: (expense) =>
+    set((state) => {
+      const exists = state.expenses.some((e) => e.id === expense.id)
+      return {
+        expenses: exists
+          ? state.expenses.map((e) => (e.id === expense.id ? expense : e))
+          : [...state.expenses, expense],
+      }
+    }),
   updateExpense: (id, data) =>
     set((state) => ({
       expenses: state.expenses.map((e) => (e.id === id ? { ...e, ...data } : e)),
