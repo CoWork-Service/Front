@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Search, Upload, CheckSquare, Square, Users } from 'lucide-react'
+import { Search, Upload, CheckSquare, Square, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useStudentStore } from '../store/useStudentStore'
 import { useCohortStore } from '../store/useCohortStore'
@@ -43,7 +43,8 @@ export default function StudentsPage() {
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -53,11 +54,29 @@ export default function StudentsPage() {
     else setSelected(new Set(filtered.map((s) => s.id)))
   }
 
-  const handleBulkPayment = (status: 'paid' | 'unpaid') => {
-    bulkSetPayment(Array.from(selected), status)
-    toast.success(`${selected.size}명 ${status === 'paid' ? '납부' : '미납'} 처리 완료`)
-    setSelected(new Set())
-    setBulkConfirm(null)
+  const handleBulkPayment = async (status: 'paid' | 'unpaid') => {
+    try {
+      await bulkSetPayment(Array.from(selected), status)
+      toast.success(`${selected.size}명 ${status === 'paid' ? '납부' : '미납'} 처리 완료`)
+      setSelected(new Set())
+      setBulkConfirm(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '일괄 처리에 실패했습니다.')
+    }
+  }
+
+  const handleStudentPayment = async (status: 'paid' | 'unpaid') => {
+    if (!selectedStudent) return
+    try {
+      await updateStudent(selectedStudent.id, {
+        paymentStatus: status,
+        paidAt: status === 'paid' ? new Date().toISOString().slice(0, 10) : undefined,
+      })
+      toast.success(status === 'paid' ? '납부 처리 완료' : '미납 처리 완료')
+      setSelectedStudent(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '납부 상태 변경에 실패했습니다.')
+    }
   }
 
   return (
@@ -195,11 +214,11 @@ export default function StudentsPage() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => { updateStudent(selectedStudent.id, { paymentStatus: 'paid', paidAt: new Date().toISOString().slice(0, 10) }); toast.success('납부 처리 완료'); setSelectedStudent(null) }}
+                onClick={() => void handleStudentPayment('paid')}
                 className="btn-primary flex-1 justify-center"
               >납부 처리</button>
               <button
-                onClick={() => { updateStudent(selectedStudent.id, { paymentStatus: 'unpaid', paidAt: undefined }); toast.success('미납 처리 완료'); setSelectedStudent(null) }}
+                onClick={() => void handleStudentPayment('unpaid')}
                 className="btn-secondary flex-1 justify-center"
               >미납 처리</button>
             </div>

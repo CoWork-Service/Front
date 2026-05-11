@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Users, BarChart2 } from 'lucide-react'
 import { useSurveyStore } from '../store/useSurveyStore'
@@ -6,10 +6,23 @@ import { SurveyStatusBadge } from '../components/common/StatusBadge'
 
 export default function SurveyResultsPage() {
   const { surveyId } = useParams<{ surveyId: string }>()
-  const { surveys } = useSurveyStore()
+  const { surveys, loadSurveyDetail } = useSurveyStore()
   const survey = surveys.find((s) => s.id === surveyId)
+  const [loadError, setLoadError] = useState('')
+  const requestedSurveyId = useRef<string | null>(null)
 
-  if (!survey) return <div className="p-8 text-slate-500">설문을 찾을 수 없습니다.</div>
+  useEffect(() => {
+    if (!surveyId || survey || requestedSurveyId.current === surveyId) return
+    requestedSurveyId.current = surveyId
+    void loadSurveyDetail(surveyId).catch((error) => {
+      setLoadError(error instanceof Error ? error.message : '설문을 불러오지 못했습니다.')
+    })
+  }, [loadSurveyDetail, survey, surveyId])
+
+  if (!survey) {
+    const isLoading = Boolean(surveyId && !loadError)
+    return <div className="p-8 text-slate-500">{isLoading ? '설문을 불러오는 중입니다.' : loadError || '설문을 찾을 수 없습니다.'}</div>
+  }
 
   const totalResponses = survey.responses.length
 
@@ -79,7 +92,6 @@ export default function SurveyResultsPage() {
             const isChoice = ['multiple_choice', 'checkbox', 'dropdown'].includes(q.type)
             const stats = isChoice ? getQuestionStats(q.id, q.type) : {}
             const textAnswers = !isChoice ? getTextAnswers(q.id) : []
-            const maxCount = isChoice ? Math.max(...Object.values(stats), 1) : 1
 
             return (
               <div key={q.id} className="card p-5">
@@ -96,7 +108,7 @@ export default function SurveyResultsPage() {
                 {isChoice && q.options && (
                   <div className="space-y-2">
                     {q.options.map((opt) => {
-                      const count = stats[opt.text] ?? 0
+                      const count = stats[opt.id] ?? 0
                       const pct = totalResponses > 0 ? Math.round((count / totalResponses) * 100) : 0
                       return (
                         <div key={opt.id}>

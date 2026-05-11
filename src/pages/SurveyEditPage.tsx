@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Save } from 'lucide-react'
 import { useSurveyStore } from '../store/useSurveyStore'
@@ -14,6 +14,12 @@ const TYPE_LABELS: Record<QuestionType, string> = {
   multiple_choice: '객관식',
   checkbox: '체크박스',
   dropdown: '드롭다운',
+}
+
+let draftId = 0
+function nextDraftId(prefix: string) {
+  draftId += 1
+  return `${prefix}-${draftId}`
 }
 
 interface QuestionCardProps {
@@ -147,13 +153,13 @@ export default function SurveyEditPage() {
 
   const addQuestion = (type: QuestionType = 'short_text') => {
     const newQ: Question = {
-      id: `q-${Date.now()}`,
+      id: nextDraftId('q'),
       order: questions.length + 1,
       title: '',
       type,
       required: false,
       options: ['multiple_choice', 'checkbox', 'dropdown'].includes(type)
-        ? [{ id: `o-${Date.now()}`, text: '' }]
+        ? [{ id: nextDraftId('o'), text: '' }]
         : undefined,
     }
     setQuestions([...questions, newQ])
@@ -183,25 +189,33 @@ export default function SurveyEditPage() {
     setQuestions(next)
   }
 
-  const handleSave = (publish = false) => {
+  const handleSave = async (publish = false) => {
     if (!title.trim()) { toast.error('설문 제목을 입력해주세요.'); return }
     if (isNew) {
-      const id = addSurvey({
-        cohortId: currentCohortId,
-        title: title.trim(),
-        description: description.trim(),
-        status: publish ? 'open' : 'draft',
-        questions,
-        createdBy: '김민준',
-        eventId: eventId || undefined,
-      })
-      if (publish) toast.success('설문이 공개되었습니다.')
-      else toast.success('임시 저장되었습니다.')
-      navigate(`/surveys/${id}/edit`)
+      try {
+        const id = await addSurvey({
+          cohortId: currentCohortId,
+          title: title.trim(),
+          description: description.trim(),
+          status: publish ? 'open' : 'draft',
+          questions,
+          createdBy: '김민준',
+          eventId: eventId || undefined,
+        })
+        if (publish) toast.success('설문이 공개되었습니다.')
+        else toast.success('임시 저장되었습니다.')
+        navigate(`/surveys/${id}/edit`)
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : '설문 저장에 실패했습니다.')
+      }
     } else if (existing) {
-      updateSurvey(existing.id, { title, description, questions, eventId: eventId || undefined })
-      if (publish) updateStatus(existing.id, 'open')
-      toast.success(publish ? '설문이 공개되었습니다.' : '저장되었습니다.')
+      try {
+        await updateSurvey(existing.id, { title, description, questions, eventId: eventId || undefined })
+        if (publish) await updateStatus(existing.id, 'open')
+        toast.success(publish ? '설문이 공개되었습니다.' : '저장되었습니다.')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : '설문 저장에 실패했습니다.')
+      }
     }
   }
 

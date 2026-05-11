@@ -1,5 +1,4 @@
 import React from 'react'
-import type { Department } from '../../types'
 
 const colorMap: Record<string, string> = {
   '전체': 'bg-blue-600 text-white',

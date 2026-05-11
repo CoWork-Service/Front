@@ -30,22 +30,37 @@ export default function WorkspaceDetailPage() {
 
   const isAll = workspace.departmentId === '전체'
 
-  const handleAddMeeting = () => {
+  const handleAddMeeting = async () => {
     if (!meetingForm.title || !meetingForm.date) { toast.error('제목과 날짜는 필수입니다.'); return }
-    addMeeting(workspace.id, {
-      title: meetingForm.title,
-      date: meetingForm.date,
-      attendees: meetingForm.attendees.split(',').map((a) => a.trim()).filter(Boolean),
-      agenda: meetingForm.agenda,
-      content: meetingForm.content,
-      attachments: [],
-      workspaceId: workspace.id,
-      createdBy: '김민준',
-      eventId: meetingForm.eventId || undefined,
-    })
-    toast.success('회의록이 작성되었습니다.')
-    setNewMeetingOpen(false)
-    setMeetingForm({ title: '', date: '', attendees: '', agenda: '', content: '', eventId: '' })
+    try {
+      await addMeeting(workspace.id, {
+        title: meetingForm.title,
+        date: meetingForm.date,
+        attendees: meetingForm.attendees.split(',').map((a) => a.trim()).filter(Boolean),
+        agenda: meetingForm.agenda,
+        content: meetingForm.content,
+        attachments: [],
+        workspaceId: workspace.id,
+        createdBy: '김민준',
+        eventId: meetingForm.eventId || undefined,
+      })
+      toast.success('회의록이 작성되었습니다.')
+      setNewMeetingOpen(false)
+      setMeetingForm({ title: '', date: '', attendees: '', agenda: '', content: '', eventId: '' })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '회의록 작성에 실패했습니다.')
+    }
+  }
+
+  const handleDeleteMeeting = async () => {
+    if (!deleteConfirm) return
+    try {
+      await deleteMeeting(workspace.id, deleteConfirm)
+      toast.success('삭제되었습니다.')
+      setDeleteConfirm(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '회의록 삭제에 실패했습니다.')
+    }
   }
 
   return (
@@ -183,7 +198,7 @@ export default function WorkspaceDetailPage() {
 
       {/* 삭제 확인 */}
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="회의록 삭제" size="sm"
-        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button><button onClick={() => { deleteConfirm && deleteMeeting(workspace.id, deleteConfirm); toast.success('삭제되었습니다.'); setDeleteConfirm(null) }} className="btn-danger">삭제</button></>}
+        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button><button onClick={handleDeleteMeeting} className="btn-danger">삭제</button></>}
       >
         <p className="text-sm text-slate-600">이 회의록을 삭제하시겠습니까?</p>
       </Modal>

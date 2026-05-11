@@ -285,7 +285,7 @@ function EventModal({ open, onClose, editTarget, currentCohortId }: EventModalPr
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) { toast.error('행사명을 입력해주세요.'); return }
     if (!form.startDate) { toast.error('시작일을 입력해주세요.'); return }
     if (!form.endDate) { toast.error('종료일을 입력해주세요.'); return }
@@ -306,14 +306,18 @@ function EventModal({ open, onClose, editTarget, currentCohortId }: EventModalPr
       createdBy: '김민준',
     }
 
-    if (editTarget) {
-      updateEvent(editTarget.id, payload)
-      toast.success('행사가 수정되었습니다.')
-    } else {
-      addEvent(payload)
-      toast.success('행사가 등록되었습니다.')
+    try {
+      if (editTarget) {
+        await updateEvent(editTarget.id, payload)
+        toast.success('행사가 수정되었습니다.')
+      } else {
+        await addEvent(payload)
+        toast.success('행사가 등록되었습니다.')
+      }
+      onClose()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '행사 저장에 실패했습니다.')
     }
-    onClose()
   }
 
   const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'

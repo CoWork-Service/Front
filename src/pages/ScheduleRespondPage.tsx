@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react'
 import { useScheduleStore } from '../store/useScheduleStore'
@@ -36,7 +36,7 @@ const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 
 export default function TimetableRespondPage() {
   const { pollId } = useParams<{ pollId: string }>()
-  const { schedules, addResponse } = useScheduleStore()
+  const { schedules, addResponse, loadScheduleDetail } = useScheduleStore()
   const toast = useToast()
 
   const tt = schedules.find((t) => t.id === pollId)
@@ -45,7 +45,23 @@ export default function TimetableRespondPage() {
   const [dragging, setDragging] = useState(false)
   const [dragAction, setDragAction] = useState<'add' | 'remove'>('add')
   const [submitted, setSubmitted] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const requestedPollId = useRef<string | null>(null)
 
+  useEffect(() => {
+    if (!pollId || tt || requestedPollId.current === pollId) return
+    requestedPollId.current = pollId
+    void loadScheduleDetail(pollId)
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : '일정 조율을 불러오지 못했습니다.'
+        setLoadError(message)
+        toast.error(message)
+      })
+  }, [loadScheduleDetail, pollId, toast, tt])
+
+  const isLoading = Boolean(pollId && !tt && !loadError)
+  if (isLoading) return <div className="p-8 text-slate-500">일정 조율을 불러오는 중입니다.</div>
+  if (loadError) return <div className="p-8 text-slate-500">{loadError}</div>
   if (!tt) return <div className="p-8 text-slate-500">조율을 찾을 수 없습니다.</div>
 
   if (tt.status === 'closed') {
@@ -85,7 +101,8 @@ export default function TimetableRespondPage() {
     const key = slotKey(date, time)
     setSelected((prev) => {
       const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
@@ -108,18 +125,22 @@ export default function TimetableRespondPage() {
     })
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) { toast.error('이름을 입력해주세요.'); return }
     const slots: TimeSlot[] = Array.from(selected).map((k) => {
       const [date, time] = k.split('_')
       return { date, time }
     })
-    addResponse(pollId!, {
-      participantName: name.trim(),
-      availableSlots: slots,
-      respondedAt: new Date().toISOString(),
-    })
-    setSubmitted(true)
+    try {
+      await addResponse(pollId!, {
+        participantName: name.trim(),
+        availableSlots: slots,
+        respondedAt: new Date().toISOString(),
+      })
+      setSubmitted(true)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '응답 저장에 실패했습니다.')
+    }
   }
 
   return (

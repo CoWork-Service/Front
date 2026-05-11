@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Plus, Search, Trash2, Edit2, Eye, TrendingDown, Smartphone, QrCode, CalendarDays, Image, CheckSquare, Square, Receipt } from 'lucide-react'
+import { Plus, Search, Trash2, Edit2, Eye, Smartphone, CalendarDays, Image, CheckSquare, Square } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
 import { useBudgetStore } from '../store/useBudgetStore'
@@ -8,6 +8,7 @@ import { useEventStore } from '../store/useEventStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { DepartmentTag } from '../components/common/DepartmentTag'
 import { EmptyState } from '../components/common/EmptyState'
+import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 import { apiRequest } from '../lib/api'
@@ -72,6 +73,7 @@ const defaultForm = {
   amount: '',
   paymentMethod: '' as PaymentMethod | '',
   receiptUrl: '',
+  receiptFile: null as File | null,
   photoIds: [] as string[],
   note: '',
   eventId: '',
@@ -272,7 +274,7 @@ export default function BudgetPage() {
   useEffect(() => {
     if (!qrOpen || !qrExpiresAt) return
     const id = setInterval(() => {
-      setQrRemaining((prev) => {
+      setQrRemaining(() => {
         const next = Math.max(0, new Date(qrExpiresAt).getTime() - Date.now())
         if (next === 0) {
           void generateQrSession()
@@ -350,6 +352,7 @@ export default function BudgetPage() {
       amount: String(e.amount),
       paymentMethod: e.paymentMethod,
       receiptUrl: e.receiptUrl ?? '',
+      receiptFile: null,
       photoIds: e.photoIds ?? [],
       note: e.note ?? '',
       eventId: e.eventId ?? '',
@@ -357,7 +360,7 @@ export default function BudgetPage() {
     setFormOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.date || !form.department || !form.amount || !form.vendor) {
       toast.error('날짜, 부서, 사용처, 금액은 필수입니다.')
       return
@@ -379,9 +382,29 @@ export default function BudgetPage() {
       note: form.note || undefined,
       eventId: form.eventId || undefined,
     }
-    if (editTarget) { updateExpense(editTarget.id, data); toast.success('지출 내역이 수정되었습니다.') }
-    else { addExpense(data); toast.success('지출 내역이 등록되었습니다.') }
-    setFormOpen(false)
+    try {
+      if (editTarget) {
+        await updateExpense(editTarget.id, data, form.receiptFile)
+        toast.success('지출 내역이 수정되었습니다.')
+      } else {
+        await addExpense(data, form.receiptFile)
+        toast.success('지출 내역이 등록되었습니다.')
+      }
+      setFormOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '지출 내역 저장에 실패했습니다.')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    try {
+      await deleteExpense(deleteConfirm)
+      toast.success('삭제되었습니다.')
+      setDeleteConfirm(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '삭제에 실패했습니다.')
+    }
   }
 
   const handleEventChange = (eventId: string) => {
@@ -470,8 +493,6 @@ export default function BudgetPage() {
                 const linkedPhotos = linkedEvent
                   ? (linkedEvent.photos ?? []).filter((p) => e.photoIds?.includes(p.id))
                   : []
-                const hasEvidence = !!e.receiptUrl || linkedPhotos.length > 0
-
                 return (
                   <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">{e.date}</td>
@@ -602,8 +623,13 @@ export default function BudgetPage() {
             <p className="text-xs text-slate-400 mt-1">이 지출을 특정 행사에 연결하면 행사 상세 페이지에서 함께 확인할 수 있습니다.</p>
           </div>
           <div className="col-span-2">
-            <label className="label">영수증 이미지 URL (더미)</label>
-            <input type="text" value={form.receiptUrl} onChange={(e) => setForm({ ...form, receiptUrl: e.target.value })} placeholder="https://..." className="input" />
+            <label className="label">영수증 파일</label>
+            <FileUploadDropzone
+              accept="image/*,.pdf"
+              label="영수증을 드래그하거나 클릭하여 업로드"
+              hint="이미지 또는 PDF 파일을 S3에 저장합니다."
+              onFiles={(files) => setForm({ ...form, receiptFile: files[0] ?? null })}
+            />
           </div>
           {form.eventId && (
             <div className="col-span-2">
@@ -644,7 +670,7 @@ export default function BudgetPage() {
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="삭제 확인" size="sm" footer={
         <>
           <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button>
-          <button onClick={() => { deleteConfirm && deleteExpense(deleteConfirm); toast.success('삭제되었습니다.'); setDeleteConfirm(null) }} className="btn-danger">삭제</button>
+          <button onClick={handleDelete} className="btn-danger">삭제</button>
         </>
       }>
         <p className="text-sm text-slate-600">이 지출 내역을 삭제하시겠습니까?</p>

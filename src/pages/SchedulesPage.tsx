@@ -17,12 +17,6 @@ function isoDate(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
-function addDays(dateStr: string, n: number) {
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
 function rangeContains(start: string, end: string, day: string) {
   return day >= start && day <= end
 }
@@ -379,7 +373,12 @@ export default function TimetablesPage() {
 
       {/* 마감 확인 */}
       <Modal open={!!closeConfirm} onClose={() => setCloseConfirm(null)} title="조율 마감" size="sm"
-        footer={<><button onClick={() => setCloseConfirm(null)} className="btn-secondary">취소</button><button onClick={() => { closeConfirm && updateStatus(closeConfirm, 'closed'); toast.success('마감되었습니다.'); setCloseConfirm(null) }} className="btn-primary">마감하기</button></>}
+        footer={<><button onClick={() => setCloseConfirm(null)} className="btn-secondary">취소</button><button onClick={async () => {
+          if (!closeConfirm) return
+          await updateStatus(closeConfirm, 'closed')
+          toast.success('마감되었습니다.')
+          setCloseConfirm(null)
+        }} className="btn-primary">마감하기</button></>}
       >
         <p className="text-sm text-slate-600">이 시간 조율을 마감하시겠습니까? 이후 응답을 받을 수 없습니다.</p>
       </Modal>

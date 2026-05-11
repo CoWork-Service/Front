@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 import { useSurveyStore } from '../store/useSurveyStore'
@@ -6,14 +6,30 @@ import { useToast } from '../components/common/Toast'
 
 export default function SurveyRespondPage() {
   const { surveyId } = useParams<{ surveyId: string }>()
-  const { surveys, addResponse } = useSurveyStore()
+  const { surveys, addResponse, loadSurveyDetail } = useSurveyStore()
   const toast = useToast()
 
   const survey = surveys.find((s) => s.id === surveyId)
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [loadError, setLoadError] = useState('')
+  const requestedSurveyId = useRef<string | null>(null)
 
+  useEffect(() => {
+    if (!surveyId || survey || requestedSurveyId.current === surveyId) return
+    requestedSurveyId.current = surveyId
+    void loadSurveyDetail(surveyId)
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : '설문을 불러오지 못했습니다.'
+        setLoadError(message)
+        toast.error(message)
+      })
+  }, [loadSurveyDetail, survey, surveyId, toast])
+
+  const isLoading = Boolean(surveyId && !survey && !loadError)
+  if (isLoading) return <div className="p-8 text-slate-500">설문을 불러오는 중입니다.</div>
+  if (loadError) return <div className="p-8 text-slate-500">{loadError}</div>
   if (!survey) return <div className="p-8 text-slate-500">설문을 찾을 수 없습니다.</div>
 
   if (survey.status === 'closed') {
@@ -53,7 +69,7 @@ export default function SurveyRespondPage() {
     setAnswer(questionId, next)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newErrors: Record<string, string> = {}
     for (const q of survey.questions) {
       if (!q.required) continue
@@ -67,11 +83,15 @@ export default function SurveyRespondPage() {
       toast.error('필수 문항을 모두 작성해주세요.')
       return
     }
-    addResponse(survey.id, {
-      respondedAt: new Date().toISOString(),
-      answers,
-    })
-    setSubmitted(true)
+    try {
+      await addResponse(survey.id, {
+        respondedAt: new Date().toISOString(),
+        answers,
+      })
+      setSubmitted(true)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '응답 제출에 실패했습니다.')
+    }
   }
 
   return (
@@ -121,9 +141,9 @@ export default function SurveyRespondPage() {
                     <input
                       type="radio"
                       name={q.id}
-                      value={opt.text}
-                      checked={answers[q.id] === opt.text}
-                      onChange={() => setAnswer(q.id, opt.text)}
+                      value={opt.id}
+                      checked={answers[q.id] === opt.id}
+                      onChange={() => setAnswer(q.id, opt.id)}
                       className="accent-blue-600"
                     />
                     <span className="text-sm text-slate-700 group-hover:text-slate-900">{opt.text}</span>
@@ -137,8 +157,8 @@ export default function SurveyRespondPage() {
                   <label key={opt.id} className="flex items-center gap-2.5 cursor-pointer group">
                     <input
                       type="checkbox"
-                      checked={((answers[q.id] as string[]) ?? []).includes(opt.text)}
-                      onChange={() => toggleCheckbox(q.id, opt.text)}
+                      checked={((answers[q.id] as string[]) ?? []).includes(opt.id)}
+                      onChange={() => toggleCheckbox(q.id, opt.id)}
                       className="accent-blue-600"
                     />
                     <span className="text-sm text-slate-700 group-hover:text-slate-900">{opt.text}</span>
@@ -154,7 +174,7 @@ export default function SurveyRespondPage() {
               >
                 <option value="">선택하세요</option>
                 {(q.options ?? []).map((opt) => (
-                  <option key={opt.id} value={opt.text}>{opt.text}</option>
+                  <option key={opt.id} value={opt.id}>{opt.text}</option>
                 ))}
               </select>
             )}

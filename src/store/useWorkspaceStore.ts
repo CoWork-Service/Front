@@ -1,18 +1,37 @@
 import { create } from 'zustand'
-import { workspaces as initialWorkspaces } from '../data/workspaces'
+import { apiRequest } from '../lib/api'
+import { fetchWorkspaces, toMeeting, type ApiMeeting } from '../lib/backendApi'
 import type { Workspace, Meeting } from '../types'
 
 interface WorkspaceStore {
   workspaces: Workspace[]
-  addMeeting: (workspaceId: string, meeting: Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>) => string
-  updateMeeting: (workspaceId: string, meetingId: string, data: Partial<Meeting>) => void
-  deleteMeeting: (workspaceId: string, meetingId: string) => void
+  isLoading: boolean
+  error?: string
+  loadWorkspaces: (cohortId: string) => Promise<void>
+  addMeeting: (workspaceId: string, meeting: Omit<Meeting, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>
+  updateMeeting: (workspaceId: string, meetingId: string, data: Partial<Meeting>) => Promise<void>
+  deleteMeeting: (workspaceId: string, meetingId: string) => Promise<void>
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
-  workspaces: initialWorkspaces,
-  addMeeting: (workspaceId, meeting) => {
-    const id = `meet-${Date.now()}`
+  workspaces: [],
+  isLoading: false,
+  error: undefined,
+  loadWorkspaces: async (cohortId) => {
+    if (!cohortId) return
+    set({ isLoading: true, error: undefined })
+    try {
+      set({ workspaces: await fetchWorkspaces(cohortId), isLoading: false })
+    } catch (error) {
+      set({ isLoading: false, error: error instanceof Error ? error.message : '워크스페이스를 불러오지 못했습니다.' })
+    }
+  },
+  addMeeting: async (workspaceId, meeting) => {
+    const saved = await apiRequest<ApiMeeting>(`/api/workspaces/${workspaceId}/meetings`, {
+      method: 'POST',
+      body: JSON.stringify(meetingToApiPayload(meeting)),
+    })
+    const newMeeting = toMeeting(saved)
     set((state) => ({
       workspaces: state.workspaces.map((ws) => {
         if (ws.id !== workspaceId) return ws
@@ -20,22 +39,18 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
           ...ws,
           meetingCount: ws.meetingCount + 1,
           updatedAt: new Date().toISOString(),
-          meetings: [
-            ...ws.meetings,
-            {
-              ...meeting,
-              id,
-              workspaceId,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          ],
+          meetings: [...ws.meetings, newMeeting],
         }
       }),
     }))
-    return id
+    return newMeeting.id
   },
-  updateMeeting: (workspaceId, meetingId, data) =>
+  updateMeeting: async (workspaceId, meetingId, data) => {
+    const saved = await apiRequest<ApiMeeting>(`/api/workspaces/${workspaceId}/meetings/${meetingId}`, {
+      method: 'PUT',
+      body: JSON.stringify(meetingToApiPayload(data)),
+    })
+    const nextMeeting = toMeeting(saved)
     set((state) => ({
       workspaces: state.workspaces.map((ws) => {
         if (ws.id !== workspaceId) return ws
@@ -44,13 +59,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
           updatedAt: new Date().toISOString(),
           meetings: ws.meetings.map((m) =>
             m.id === meetingId
-              ? { ...m, ...data, updatedAt: new Date().toISOString() }
+              ? nextMeeting
               : m
           ),
         }
       }),
-    })),
-  deleteMeeting: (workspaceId, meetingId) =>
+    }))
+  },
+  deleteMeeting: async (workspaceId, meetingId) => {
+    await apiRequest<void>(`/api/workspaces/${workspaceId}/meetings/${meetingId}`, { method: 'DELETE' })
     set((state) => ({
       workspaces: state.workspaces.map((ws) => {
         if (ws.id !== workspaceId) return ws
@@ -60,5 +77,23 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
           meetings: ws.meetings.filter((m) => m.id !== meetingId),
         }
       }),
-    })),
+    }))
+  },
 }))
+
+function meetingToApiPayload(meeting: Partial<Meeting>) {
+  return {
+    title: meeting.title,
+    date: meeting.date,
+    attendees: meeting.attendees ?? [],
+    agenda: meeting.agenda,
+    content: meeting.content,
+    eventId: meeting.eventId ? Number(meeting.eventId) : undefined,
+    attachments: meeting.attachments?.map((attachment) => ({
+      fileItemId: Number(attachment.id),
+      storagePath: attachment.url,
+      name: attachment.name,
+      size: attachment.size,
+    })) ?? [],
+  }
+}

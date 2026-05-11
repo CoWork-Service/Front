@@ -27,25 +27,29 @@ export default function TimetableNewPage() {
     eventId: '',
   })
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.title || !form.startDate || !form.endDate) {
       toast.error('제목, 시작일, 종료일은 필수입니다.')
       return
     }
-    const id = addSchedule({
-      cohortId: currentCohortId,
-      title: form.title,
-      description: form.description || undefined,
-      dateRange: { start: form.startDate, end: form.endDate },
-      timeRange: { start: form.startTime, end: form.endTime },
-      slotMinutes: Number(form.slotMinutes) as 30 | 60,
-      participants: form.participants.split(',').map((p) => p.trim()).filter(Boolean),
-      status: 'open',
-      createdBy: '김민준',
-      eventId: form.eventId || undefined,
-    })
-    toast.success('조율방이 생성되었습니다.')
-    navigate(`/schedules/${id}/respond`)
+    try {
+      const id = await addSchedule({
+        cohortId: currentCohortId,
+        title: form.title,
+        description: form.description || undefined,
+        dateRange: { start: form.startDate, end: form.endDate },
+        timeRange: { start: form.startTime, end: form.endTime },
+        slotMinutes: Number(form.slotMinutes) as 30 | 60,
+        participants: form.participants.split(',').map((p) => p.trim()).filter(Boolean),
+        status: 'open',
+        createdBy: '김민준',
+        eventId: form.eventId || undefined,
+      })
+      toast.success('조율방이 생성되었습니다.')
+      navigate(`/schedules/${id}/respond`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '조율방 생성에 실패했습니다.')
+    }
   }
 
   return (

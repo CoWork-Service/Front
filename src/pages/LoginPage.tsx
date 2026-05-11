@@ -1,28 +1,12 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { ExternalLink, GraduationCap, LogIn, ShieldCheck } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ExternalLink, GraduationCap, ShieldCheck } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 import { buildSsoLoginUrl, clearAuthSession } from '../lib/auth'
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-
   const handleSsoLogin = () => {
     clearAuthSession()
     window.location.assign(buildSsoLoginUrl())
-  }
-
-  const handleNewUserDemo = () => {
-    clearAuthSession()
-    navigate(
-      '/auth/sso/callback?token=dev-sso-access-token&name=김민준&studentId=20260001&department=AI소프트웨어학부&hasCouncil=false',
-    )
-  }
-
-  const handleActiveUserDemo = () => {
-    clearAuthSession()
-    navigate(
-      '/main?accessToken=dev-sso-access-token&refreshToken=dev-sso-refresh-token&name=김민준&studentId=20260001&department=AI소프트웨어학부&hasCouncil=true&joinStatus=ACTIVE',
-    )
   }
 
   return (
@@ -49,30 +33,6 @@ export default function LoginPage() {
             숭실대 SSO로 로그인
             <ExternalLink size={14} className="ml-auto" />
           </button>
-
-          {import.meta.env.DEV && (
-            <>
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-2 text-xs text-slate-400">개발 확인</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button onClick={handleNewUserDemo} className="btn-secondary justify-center py-2.5">
-                  <LogIn size={15} />
-                  신규 SSO
-                </button>
-                <button onClick={handleActiveUserDemo} className="btn-secondary justify-center py-2.5">
-                  <ShieldCheck size={15} />
-                  등록 회원
-                </button>
-              </div>
-            </>
-          )}
         </div>
 
         <p className="text-center mt-4 text-sm text-slate-500">

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Search, Package, Trash2, Edit2, ArrowRightLeft, RotateCcw, Image } from 'lucide-react'
+import { Plus, Search, Edit2, ArrowRightLeft, Image } from 'lucide-react'
 import { useAssetStore } from '../store/useAssetStore'
 import { useCohortStore } from '../store/useCohortStore'
 import { PageHeader } from '../components/common/PageHeader'
 import { AssetStatusBadge } from '../components/common/StatusBadge'
 import { EmptyState } from '../components/common/EmptyState'
 import { Drawer } from '../components/common/Drawer'
+import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 import type { Asset, RentalRecord } from '../types'
@@ -29,6 +30,7 @@ export default function AssetsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [assetFormOpen, setAssetFormOpen] = useState(false)
+  const [assetPhotoFile, setAssetPhotoFile] = useState<File | null>(null)
   const [editTarget, setEditTarget] = useState<Asset | null>(null)
   const [assetForm, setAssetForm] = useState(defaultAssetForm)
   const [rentModalOpen, setRentModalOpen] = useState(false)
@@ -48,9 +50,10 @@ export default function AssetsPage() {
     return list
   }, [cohortAssets, search, statusFilter])
 
-  const openCreate = () => { setEditTarget(null); setAssetForm(defaultAssetForm); setAssetFormOpen(true) }
+  const openCreate = () => { setEditTarget(null); setAssetForm(defaultAssetForm); setAssetPhotoFile(null); setAssetFormOpen(true) }
   const openEdit = (a: Asset) => {
     setEditTarget(a)
+    setAssetPhotoFile(null)
     setAssetForm({
       name: a.name, category: a.category,
       tags: a.tags.join(', '),
@@ -63,7 +66,7 @@ export default function AssetsPage() {
     setAssetFormOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!assetForm.name) { toast.error('자산명을 입력해주세요.'); return }
     const qty = Number(assetForm.quantity) || 1
     const data = {
@@ -79,41 +82,70 @@ export default function AssetsPage() {
       status: 'available' as const,
       description: assetForm.description || undefined,
     }
-    if (editTarget) { updateAsset(editTarget.id, data); toast.success('자산 정보가 수정되었습니다.') }
-    else { addAsset(data); toast.success('자산이 등록되었습니다.') }
-    setAssetFormOpen(false)
+    try {
+      if (editTarget) {
+        await updateAsset(editTarget.id, data, assetPhotoFile)
+        toast.success('자산 정보가 수정되었습니다.')
+      } else {
+        await addAsset(data, assetPhotoFile)
+        toast.success('자산이 등록되었습니다.')
+      }
+      setAssetFormOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '자산 저장에 실패했습니다.')
+    }
   }
 
-  const handleRent = () => {
+  const handleRent = async () => {
     if (!selectedAsset) return
     if (!rentForm.borrowerName || !rentForm.rentedAt || !rentForm.dueAt) {
       toast.error('대여자명, 대여일, 반납 예정일은 필수입니다.')
       return
     }
-    rentAsset(selectedAsset.id, {
-      borrowerName: rentForm.borrowerName,
-      studentId: rentForm.studentId,
-      contact: rentForm.contact,
-      rentedAt: rentForm.rentedAt,
-      dueAt: rentForm.dueAt,
-      quantity: Number(rentForm.quantity) || 1,
-      note: rentForm.note || undefined,
-    })
-    const updated = assets.find((a) => a.id === selectedAsset.id)
-    if (updated) setSelectedAsset({ ...updated })
-    toast.success('대여 처리가 완료되었습니다.')
-    setRentModalOpen(false)
-    setRentForm(defaultRentForm)
-  }
-
-  const handleReturn = () => {
-    if (!returnConfirm) return
-    returnAsset(returnConfirm.assetId, returnConfirm.rental.id)
-    toast.success('반납 처리가 완료되었습니다.')
-    setReturnConfirm(null)
-    if (selectedAsset) {
+    try {
+      await rentAsset(selectedAsset.id, {
+        borrowerName: rentForm.borrowerName,
+        studentId: rentForm.studentId,
+        contact: rentForm.contact,
+        rentedAt: rentForm.rentedAt,
+        dueAt: rentForm.dueAt,
+        quantity: Number(rentForm.quantity) || 1,
+        note: rentForm.note || undefined,
+      })
       const updated = assets.find((a) => a.id === selectedAsset.id)
       if (updated) setSelectedAsset({ ...updated })
+      toast.success('대여 처리가 완료되었습니다.')
+      setRentModalOpen(false)
+      setRentForm(defaultRentForm)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '대여 처리에 실패했습니다.')
+    }
+  }
+
+  const handleReturn = async () => {
+    if (!returnConfirm) return
+    try {
+      await returnAsset(returnConfirm.assetId, returnConfirm.rental.id)
+      toast.success('반납 처리가 완료되었습니다.')
+      setReturnConfirm(null)
+      if (selectedAsset) {
+        const updated = assets.find((a) => a.id === selectedAsset.id)
+        if (updated) setSelectedAsset({ ...updated })
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '반납 처리에 실패했습니다.')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    try {
+      await deleteAsset(deleteConfirm)
+      toast.success('삭제되었습니다.')
+      setDeleteConfirm(null)
+      setSelectedAsset(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '삭제에 실패했습니다.')
     }
   }
 
@@ -274,7 +306,15 @@ export default function AssetsPage() {
           <div><label className="label">수량</label><input type="number" value={assetForm.quantity} onChange={(e) => setAssetForm({ ...assetForm, quantity: e.target.value })} className="input" /></div>
           <div><label className="label">구매가</label><input type="number" value={assetForm.purchasePrice} onChange={(e) => setAssetForm({ ...assetForm, purchasePrice: e.target.value })} className="input" /></div>
           <div className="col-span-2"><label className="label">태그 (쉼표 구분)</label><input type="text" value={assetForm.tags} onChange={(e) => setAssetForm({ ...assetForm, tags: e.target.value })} placeholder="예: 행사, 음향" className="input" /></div>
-          <div className="col-span-2"><label className="label">사진 URL (더미)</label><input type="text" value={assetForm.photoUrl} onChange={(e) => setAssetForm({ ...assetForm, photoUrl: e.target.value })} className="input" /></div>
+          <div className="col-span-2">
+            <label className="label">자산 사진</label>
+            <FileUploadDropzone
+              accept="image/*"
+              label="사진을 드래그하거나 클릭하여 업로드"
+              hint="선택한 이미지는 S3에 저장됩니다."
+              onFiles={(files) => setAssetPhotoFile(files[0] ?? null)}
+            />
+          </div>
           <div className="col-span-2"><label className="label">설명</label><textarea rows={2} value={assetForm.description} onChange={(e) => setAssetForm({ ...assetForm, description: e.target.value })} className="textarea" /></div>
         </div>
       </Modal>
@@ -303,7 +343,7 @@ export default function AssetsPage() {
 
       {/* 삭제 확인 */}
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="삭제" size="sm"
-        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button><button onClick={() => { deleteConfirm && deleteAsset(deleteConfirm); toast.success('삭제되었습니다.'); setDeleteConfirm(null); setSelectedAsset(null) }} className="btn-danger">삭제</button></>}
+        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button><button onClick={handleDelete} className="btn-danger">삭제</button></>}
       >
         <p className="text-sm text-slate-600">이 자산을 삭제하시겠습니까?</p>
       </Modal>

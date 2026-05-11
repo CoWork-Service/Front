@@ -1,33 +1,24 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Upload, ChevronRight, AlertCircle, CheckCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChevronRight, AlertCircle, CheckCircle } from 'lucide-react'
 import { useStudentStore } from '../store/useStudentStore'
 import { useCohortStore } from '../store/useCohortStore'
 import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { useToast } from '../components/common/Toast'
-import type { Student } from '../types'
 
 const REQUIRED_FIELDS = ['학번', '이름', '학부/전공', '학년']
-
-// 더미 CSV 파싱 결과 시뮬레이션
-const dummyPreview: Omit<Student, 'id'>[] = [
-  { cohortId: 'import', studentId: '20261101', name: '김신입', department: 'AI소프트웨어학부', grade: 1, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261102', name: '이새내기', department: '소프트웨어학부', grade: 1, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261103', name: '박입학', department: 'AI융합학부', grade: 1, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261104', name: '최등록', department: 'AI소프트웨어학부', grade: 2, paymentStatus: 'unpaid' },
-  { cohortId: 'import', studentId: '20261105', name: '정대학', department: '소프트웨어학부', grade: 1, paymentStatus: 'unpaid' },
-]
 
 const csvColumns = ['학번', '이름', '학부/전공', '학년', '이메일', '전화번호']
 
 export default function StudentsImportPage() {
-  const navigate = useNavigate()
   const { currentCohortId } = useCohortStore()
-  const { addStudents } = useStudentStore()
+  const { importStudents } = useStudentStore()
   const toast = useToast()
 
   const [step, setStep] = useState(1)
   const [fileUploaded, setFileUploaded] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [importCount, setImportCount] = useState(0)
   const [mapping, setMapping] = useState<Record<string, string>>({
     '학번': '학번', '이름': '이름', '학부/전공': '학부/전공', '학년': '학년',
   })
@@ -36,16 +27,24 @@ export default function StudentsImportPage() {
   const handleFileUpload = (files: File[]) => {
     if (files.length > 0) {
       setFileUploaded(true)
-      // 중복 학번 경고 시뮬레이션
-      setWarnings(['20261102 학번이 기존 명단과 중복될 수 있습니다.'])
+      setSelectedFile(files[0])
+      setWarnings([])
     }
   }
 
-  const handleImport = () => {
-    const students = dummyPreview.map((s) => ({ ...s, cohortId: currentCohortId }))
-    addStudents(students)
-    toast.success(`${students.length}명의 학생 명단이 업로드되었습니다.`)
-    setStep(4)
+  const handleImport = async () => {
+    if (!selectedFile) {
+      toast.error('업로드할 파일을 선택해주세요.')
+      return
+    }
+    try {
+      await importStudents(currentCohortId, selectedFile)
+      setImportCount(1)
+      toast.success('학생 명단이 업로드되었습니다.')
+      setStep(4)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '학생 명단 업로드에 실패했습니다.')
+    }
   }
 
   const steps = ['파일 업로드', '컬럼 매핑', '미리보기', '완료']
@@ -83,14 +82,14 @@ export default function StudentsImportPage() {
         {/* Step 1: 파일 업로드 */}
         {step === 1 && (
           <div>
-            <h2 className="text-base font-semibold text-slate-800 mb-1">CSV 파일을 업로드하세요</h2>
+            <h2 className="text-base font-semibold text-slate-800 mb-1">엑셀 파일을 업로드하세요</h2>
             <p className="text-sm text-slate-500 mb-4">
               필수 컬럼: <strong>{REQUIRED_FIELDS.join(', ')}</strong>
             </p>
             <FileUploadDropzone
-              accept=".csv"
-              label="CSV 파일을 드래그하거나 클릭하여 업로드"
-              hint=".csv 형식만 지원합니다."
+              accept=".xlsx,.csv"
+              label="엑셀 파일을 드래그하거나 클릭하여 업로드"
+              hint=".xlsx 형식을 권장합니다."
               onFiles={handleFileUpload}
             />
             {warnings.length > 0 && (
@@ -155,7 +154,7 @@ export default function StudentsImportPage() {
         {step === 3 && (
           <div>
             <h2 className="text-base font-semibold text-slate-800 mb-4">업로드 미리보기</h2>
-            <p className="text-sm text-slate-500 mb-3">{dummyPreview.length}명의 학생 데이터를 확인하세요.</p>
+            <p className="text-sm text-slate-500 mb-3">선택한 파일을 확인하세요.</p>
             <div className="overflow-x-auto mb-6">
               <table className="w-full">
                 <thead>
@@ -166,14 +165,11 @@ export default function StudentsImportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dummyPreview.map((s, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="px-4 py-2.5 text-sm font-mono text-slate-700">{s.studentId}</td>
-                      <td className="px-4 py-2.5 text-sm font-medium text-slate-900">{s.name}</td>
-                      <td className="px-4 py-2.5 text-sm text-slate-600">{s.department}</td>
-                      <td className="px-4 py-2.5 text-sm text-slate-600">{s.grade}학년</td>
-                    </tr>
-                  ))}
+                  <tr className="border-b border-slate-100">
+                    <td className="px-4 py-2.5 text-sm font-mono text-slate-700" colSpan={4}>
+                      {selectedFile?.name ?? '선택된 파일 없음'} · {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : '-'}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -191,7 +187,7 @@ export default function StudentsImportPage() {
               <CheckCircle size={32} className="text-green-600" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-2">업로드 완료!</h2>
-            <p className="text-sm text-slate-500 mb-6">{dummyPreview.length}명의 학생 명단이 성공적으로 등록되었습니다.</p>
+            <p className="text-sm text-slate-500 mb-6">{importCount > 0 ? '학생 명단이 성공적으로 등록되었습니다.' : '업로드가 완료되었습니다.'}</p>
             <Link to="/students" className="btn-primary">학생 명단 확인하기</Link>
           </div>
         )}

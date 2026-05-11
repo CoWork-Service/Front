@@ -38,13 +38,12 @@ export default function OnboardingPage() {
     () => searchParams.get('tempToken') || localStorage.getItem('cowork_sso_temp_token') || '',
     [searchParams],
   )
-  const isDemoToken = !tempToken || tempToken.startsWith('dev-')
 
   const [mode, setMode] = useState<Mode>(
     localStorage.getItem('cowork_onboarding_status') === 'pending' ? 'pending' : 'select',
   )
   const [profile, setProfile] = useState<AuthUser>(storedUser || {})
-  const [isLoading, setIsLoading] = useState(Boolean(tempToken && !isDemoToken))
+  const [isLoading, setIsLoading] = useState(Boolean(tempToken))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [submitError, setSubmitError] = useState('')
@@ -59,7 +58,7 @@ export default function OnboardingPage() {
   const [departmentRows, setDepartmentRows] = useState(['', '', '', '', ''])
 
   useEffect(() => {
-    if (!tempToken || isDemoToken) return
+    if (!tempToken) return
 
     const loadProfile = async () => {
       try {
@@ -79,7 +78,7 @@ export default function OnboardingPage() {
     }
 
     loadProfile()
-  }, [tempToken, isDemoToken])
+  }, [tempToken])
 
   useEffect(() => {
     if (!form.department && profile.department) {
@@ -138,63 +137,35 @@ export default function OnboardingPage() {
     }
 
     try {
-      if (!isDemoToken && tempToken) {
-        const response = await registerSsoUser({
-          tempToken,
-          email: form.email || profile.email,
-          councilMember,
-          cohortLabel: form.cohortLabel.trim() || '1기',
-          department: form.department || profile.department,
-          organizationName: form.councilName.trim() || 'A:NSWER',
-          inviteCode: form.inviteCode,
-          departments: organizationDepartments,
-        })
-        const joinStatus = normalizeJoinStatus(response.joinStatus)
-        const responseUser: AuthUser = {
-          ...nextUser,
-          userId: response.userId,
-          name: response.name || nextUser.name,
-          email: response.email ?? nextUser.email,
-          joinStatus,
-        }
-
-        if (response.accessToken && joinStatus !== 'PENDING' && joinStatus !== 'REJECTED') {
-          saveAuthSession({
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
-            user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus },
-            authenticated: true,
-            onboardingRequired: false,
-          })
-          navigate('/home', { replace: true })
-          return
-        }
-
-        saveAuthSession({
-          tempToken,
-          user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'PENDING' : joinStatus },
-          authenticated: false,
-          onboardingRequired: true,
-          onboardingStatus: joinStatus === 'REJECTED' ? 'rejected' : 'pending',
-        })
-        if (joinStatus === 'REJECTED') {
-          navigate('/rejected', { replace: true })
-          return
-        }
-        setMode('pending')
+      if (!tempToken) {
+        setSubmitError('SSO 인증 정보가 없습니다. 다시 로그인해주세요.')
         return
       }
 
-      if (councilMember) {
+      const response = await registerSsoUser({
+        tempToken,
+        email: form.email || profile.email,
+        councilMember,
+        cohortLabel: form.cohortLabel.trim() || '1기',
+        department: form.department || profile.department,
+        organizationName: form.councilName.trim() || 'A:NSWER',
+        inviteCode: form.inviteCode,
+        departments: organizationDepartments,
+      })
+      const joinStatus = normalizeJoinStatus(response.joinStatus)
+      const responseUser: AuthUser = {
+        ...nextUser,
+        userId: response.userId,
+        name: response.name || nextUser.name,
+        email: response.email ?? nextUser.email,
+        joinStatus,
+      }
+
+      if (response.accessToken && joinStatus !== 'PENDING' && joinStatus !== 'REJECTED') {
         saveAuthSession({
-          accessToken: 'dev-sso-access-token',
-          refreshToken: 'dev-sso-refresh-token',
-          user: {
-            ...nextUser,
-            name: nextUser.name || '김민준',
-            studentId: nextUser.studentId || '20260001',
-            joinStatus: 'ACTIVE',
-          },
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+          user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus },
           authenticated: true,
           onboardingRequired: false,
         })
@@ -203,17 +174,16 @@ export default function OnboardingPage() {
       }
 
       saveAuthSession({
-        tempToken: tempToken || 'dev-sso-temp-token',
-        user: {
-          ...nextUser,
-          name: nextUser.name || '김민준',
-          studentId: nextUser.studentId || '20260001',
-          joinStatus: 'PENDING',
-        },
+        tempToken,
+        user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'PENDING' : joinStatus },
         authenticated: false,
         onboardingRequired: true,
-        onboardingStatus: 'pending',
+        onboardingStatus: joinStatus === 'REJECTED' ? 'rejected' : 'pending',
       })
+      if (joinStatus === 'REJECTED') {
+        navigate('/rejected', { replace: true })
+        return
+      }
       setMode('pending')
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : '가입 처리에 실패했습니다.')

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Plus, Copy, BarChart2, Edit2, Trash2, ClipboardList, CalendarDays } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useSurveyStore } from '../store/useSurveyStore'
 import { useCohortStore } from '../store/useCohortStore'
 import { useEventStore } from '../store/useEventStore'
@@ -9,14 +9,12 @@ import { SurveyStatusBadge } from '../components/common/StatusBadge'
 import { EmptyState } from '../components/common/EmptyState'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
-import type { Survey } from '../types'
 
 export default function SurveysPage() {
   const { currentCohortId } = useCohortStore()
   const { surveys, deleteSurvey, updateStatus } = useSurveyStore()
   const { events } = useEventStore()
   const toast = useToast()
-  const navigate = useNavigate()
 
   const cohortEvents = useMemo(
     () => events.filter((e) => e.cohortId === currentCohortId),
@@ -153,7 +151,12 @@ export default function SurveysPage() {
       )}
 
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="설문 삭제" size="sm"
-        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button><button onClick={() => { deleteConfirm && deleteSurvey(deleteConfirm); toast.success('삭제되었습니다.'); setDeleteConfirm(null) }} className="btn-danger">삭제</button></>}
+        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary">취소</button><button onClick={async () => {
+          if (!deleteConfirm) return
+          await deleteSurvey(deleteConfirm)
+          toast.success('삭제되었습니다.')
+          setDeleteConfirm(null)
+        }} className="btn-danger">삭제</button></>}
       >
         <p className="text-sm text-slate-600">이 설문과 모든 응답 데이터가 삭제됩니다. 계속하시겠습니까?</p>
       </Modal>

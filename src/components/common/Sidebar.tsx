@@ -72,7 +72,7 @@ export function Sidebar() {
       {/* 하단 조직 관리 + 버전 */}
       <div className="px-3 pb-3 border-t border-slate-100 pt-3 space-y-0.5">
         <NavItem to="/org" label="조직 관리" icon={<ShieldCheck size={18} />} />
-        <p className="text-xs text-slate-400 px-3 pt-2">CoWork v0.1 · 더미 데이터 모드</p>
+        <p className="text-xs text-slate-400 px-3 pt-2">CoWork v0.1</p>
       </div>
     </aside>
   )

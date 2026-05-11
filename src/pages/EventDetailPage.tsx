@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ChevronLeft,
@@ -151,30 +151,46 @@ function FilesTab({ files, eventId, cohortId }: { files: FileItem[]; eventId: st
   const { addFile, deleteFile } = useFileStore()
   const toast = useToast()
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadFiles, setUploadFiles] = useState<globalThis.File[]>([])
   const [deleteConfirm, setDeleteConfirm] = useState<FileItem | null>(null)
 
   const fileOnly = files.filter((f) => f.type === 'file')
 
-  const handleUpload = () => {
-    addFile({
-      cohortId,
-      eventId,
-      name: '업로드된 파일.pdf',
-      type: 'file',
-      mimeType: 'application/pdf',
-      size: 512000,
-      path: '/업로드된 파일.pdf',
-      uploadedBy: '김민준',
-      updatedAt: new Date().toISOString(),
-    })
-    toast.success('파일이 업로드되었습니다.')
-    setUploadOpen(false)
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) {
+      toast.error('업로드할 파일을 선택해주세요.')
+      return
+    }
+    try {
+      for (const selected of uploadFiles) {
+        await addFile({
+          cohortId,
+          eventId,
+          name: selected.name,
+          type: 'file',
+          mimeType: selected.type,
+          size: selected.size,
+          path: selected.name,
+          uploadedBy: '사용자',
+          updatedAt: new Date().toISOString(),
+        }, selected)
+      }
+      toast.success('파일이 업로드되었습니다.')
+      setUploadFiles([])
+      setUploadOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '파일 업로드에 실패했습니다.')
+    }
   }
 
-  const handleDelete = (f: FileItem) => {
-    deleteFile(f.id)
-    toast.success('파일이 삭제되었습니다.')
-    setDeleteConfirm(null)
+  const handleDelete = async (f: FileItem) => {
+    try {
+      await deleteFile(f.id)
+      toast.success('파일이 삭제되었습니다.')
+      setDeleteConfirm(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '파일 삭제에 실패했습니다.')
+    }
   }
 
   return (
@@ -244,7 +260,7 @@ function FilesTab({ files, eventId, cohortId }: { files: FileItem[]; eventId: st
         <><button onClick={() => setUploadOpen(false)} className="btn-secondary">취소</button>
         <button onClick={handleUpload} className="btn-primary">업로드</button></>
       }>
-        <FileUploadDropzone multiple label="파일을 드래그하거나 클릭하여 업로드" hint="이 행사에 자동으로 연결됩니다." />
+        <FileUploadDropzone multiple label="파일을 드래그하거나 클릭하여 업로드" hint="이 행사에 자동으로 연결됩니다." onFiles={setUploadFiles} />
       </Modal>
 
       {/* 삭제 확인 */}
@@ -390,7 +406,6 @@ function BudgetTab({ expenses, eventPhotos }: { expenses: Expense[]; eventPhotos
           <tbody className="divide-y divide-slate-100">
             {expenses.map((e) => {
               const linkedPhotos = eventPhotos.filter((p) => e.photoIds?.includes(p.id))
-              const hasEvidence = !!e.receiptUrl || linkedPhotos.length > 0
               return (
                 <tr key={e.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{e.date}</td>
@@ -595,17 +610,16 @@ const tagStyle: Record<EventPhotoTag, string> = {
 
 function PhotosTab({
   photos,
-  eventId,
   onAdd,
   onDelete,
 }: {
   photos: EventPhoto[]
-  eventId: string
-  onAdd: (photo: { url: string; caption?: string; tag?: EventPhotoTag; uploadedBy: string }) => void
-  onDelete: (photoId: string) => void
+  onAdd: (photo: { file?: globalThis.File; url?: string; caption?: string; tag?: EventPhotoTag; uploadedBy: string }) => Promise<void>
+  onDelete: (photoId: string) => Promise<void>
 }) {
   const toast = useToast()
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadFiles, setUploadFiles] = useState<globalThis.File[]>([])
   const [lightbox, setLightbox] = useState<number | null>(null) // index
   const [deleteConfirm, setDeleteConfirm] = useState<EventPhoto | null>(null)
   const [filterTag, setFilterTag] = useState<EventPhotoTag | '전체'>('전체')
@@ -616,24 +630,39 @@ function PhotosTab({
 
   const filtered = filterTag === '전체' ? photos : photos.filter((p) => p.tag === filterTag)
 
-  const handleUpload = () => {
-    onAdd({
-      url: `https://images.unsplash.com/photo-${Date.now() % 1000000 + 1550000000000}?w=800&q=80`,
-      caption: caption || undefined,
-      tag,
-      uploadedBy: '김민준',
-    })
-    toast.success('사진이 업로드되었습니다.')
-    setCaption('')
-    setTag('행사사진')
-    setUploadOpen(false)
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) {
+      toast.error('업로드할 사진을 선택해주세요.')
+      return
+    }
+    try {
+      for (const file of uploadFiles) {
+        await onAdd({
+          file,
+          caption: caption || undefined,
+          tag,
+          uploadedBy: '사용자',
+        })
+      }
+      toast.success('사진이 업로드되었습니다.')
+      setCaption('')
+      setTag('행사사진')
+      setUploadFiles([])
+      setUploadOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '사진 업로드에 실패했습니다.')
+    }
   }
 
-  const handleDelete = (photo: EventPhoto) => {
-    onDelete(photo.id)
-    toast.success('사진이 삭제되었습니다.')
-    setDeleteConfirm(null)
-    if (lightbox !== null) setLightbox(null)
+  const handleDelete = async (photo: EventPhoto) => {
+    try {
+      await onDelete(photo.id)
+      toast.success('사진이 삭제되었습니다.')
+      setDeleteConfirm(null)
+      if (lightbox !== null) setLightbox(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '사진 삭제에 실패했습니다.')
+    }
   }
 
   const moveLightbox = (dir: 1 | -1) => {
@@ -725,7 +754,7 @@ function PhotosTab({
         <button onClick={handleUpload} className="btn-primary">추가</button></>
       }>
         <div className="space-y-4">
-          <FileUploadDropzone multiple accept="image/*" label="사진을 드래그하거나 클릭하여 업로드" hint="JPG, PNG, WEBP 등 이미지 파일을 업로드하세요." />
+          <FileUploadDropzone multiple accept="image/*" label="사진을 드래그하거나 클릭하여 업로드" hint="JPG, PNG, WEBP 등 이미지 파일을 업로드하세요." onFiles={setUploadFiles} />
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">태그</label>
             <div className="flex flex-wrap gap-2">
@@ -902,7 +931,7 @@ function EventEditModal({
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) { toast.error('행사명을 입력해주세요.'); return }
     if (!form.startDate) { toast.error('시작일을 입력해주세요.'); return }
     if (!form.endDate) { toast.error('종료일을 입력해주세요.'); return }
@@ -914,22 +943,26 @@ function EventEditModal({
       return
     }
 
-    updateEvent(event.id, {
-      name: form.name.trim(),
-      category: form.category,
-      status: form.status,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      location: form.location.trim() || undefined,
-      leadDepartment: form.leadDepartment,
-      organizers: form.organizers.split(',').map((s) => s.trim()).filter(Boolean),
-      budget,
-      description: form.description.trim() || undefined,
-      coverColor: form.coverColor,
-    })
+    try {
+      await updateEvent(event.id, {
+        name: form.name.trim(),
+        category: form.category,
+        status: form.status,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        location: form.location.trim() || undefined,
+        leadDepartment: form.leadDepartment,
+        organizers: form.organizers.split(',').map((s) => s.trim()).filter(Boolean),
+        budget,
+        description: form.description.trim() || undefined,
+        coverColor: form.coverColor,
+      })
 
-    toast.success('행사가 수정되었습니다.')
-    onClose()
+      toast.success('행사가 수정되었습니다.')
+      onClose()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '행사 수정에 실패했습니다.')
+    }
   }
 
   return (
@@ -1041,7 +1074,7 @@ export default function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
 
-  const { events, addPhoto, deletePhoto } = useEventStore()
+  const { events, addPhoto, deletePhoto, loadEventDetail } = useEventStore()
   const { files } = useFileStore()
   const { expenses } = useBudgetStore()
   const { surveys } = useSurveyStore()
@@ -1051,8 +1084,18 @@ export default function EventDetailPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [editOpen, setEditOpen] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const requestedEventId = useRef<string | null>(null)
 
   const event = useMemo(() => events.find((e) => e.id === eventId), [events, eventId])
+
+  useEffect(() => {
+    if (!eventId || event || requestedEventId.current === eventId) return
+    requestedEventId.current = eventId
+    void loadEventDetail(eventId).catch((error) => {
+      setLoadError(error instanceof Error ? error.message : '행사를 불러오지 못했습니다.')
+    })
+  }, [event, eventId, loadEventDetail])
 
   const eventFiles = useMemo(
     () => files.filter((f) => f.eventId === eventId && f.cohortId === currentCohortId),
@@ -1096,11 +1139,12 @@ export default function EventDetailPage() {
   )
 
   if (!event) {
+    const isLoading = Boolean(eventId && !loadError)
     return (
       <div className="p-8">
         <div className="flex flex-col items-center justify-center h-64 text-slate-400">
           <CalendarDays size={40} className="mb-4 text-slate-300" />
-          <p className="text-sm">행사를 찾을 수 없습니다.</p>
+          <p className="text-sm">{isLoading ? '행사를 불러오는 중입니다.' : loadError || '행사를 찾을 수 없습니다.'}</p>
           <button onClick={() => navigate('/events')} className="mt-4 text-sm text-blue-600 hover:underline">
             ← 행사 목록으로 돌아가기
           </button>
@@ -1223,7 +1267,6 @@ export default function EventDetailPage() {
       {activeTab === 'photos' && (
         <PhotosTab
           photos={eventPhotos}
-          eventId={event.id}
           onAdd={(photo) => addPhoto(event.id, photo)}
           onDelete={(photoId) => deletePhoto(event.id, photoId)}
         />

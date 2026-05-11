@@ -1,16 +1,17 @@
-import React, { useState } from 'react'
-import { ShieldCheck, Edit2, Check, X, Search, Plus } from 'lucide-react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { ShieldCheck, Edit2, Check, Search } from 'lucide-react'
 import { PageHeader } from '../components/common/PageHeader'
 import { DepartmentTag } from '../components/common/DepartmentTag'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
+import { apiRequest, buildApiPath } from '../lib/api'
+import { useCohortStore } from '../store/useCohortStore'
 import { DEPARTMENTS } from '../types'
 import type { Department } from '../types'
 
-type Role = '회장' | '부회장' | '국장' | '부장' | '팀장' | '일반'
+type ApiMemberRole = 'ADMIN' | 'EDITOR' | 'VIEWER'
 type Permission = '관리자' | '편집자' | '뷰어'
 
-const ROLES: Role[] = ['회장', '부회장', '국장', '부장', '팀장', '일반']
 const PERMISSIONS: Permission[] = ['관리자', '편집자', '뷰어']
 
 const PERMISSION_COLORS: Record<Permission, string> = {
@@ -19,75 +20,92 @@ const PERMISSION_COLORS: Record<Permission, string> = {
   뷰어: 'bg-slate-50 text-slate-600 border-slate-200',
 }
 
+type ApiMember = {
+  id: number | string
+  userId: number | string
+  name: string
+  email?: string | null
+  studentId?: string | null
+  role: ApiMemberRole
+  department?: Department | null
+  joinedAt?: string | null
+}
+
 type Member = {
   id: string
+  userId: string
   name: string
+  email: string
   studentId: string
   department: Department
-  role: Role
   permission: Permission
   joinedAt: string
 }
 
-const initialMembers: Member[] = [
-  { id: 'm1', name: '김민준', studentId: '20260001', department: '회장단', role: '회장', permission: '관리자', joinedAt: '2026-03-01' },
-  { id: 'm2', name: '이서연', studentId: '20260002', department: '총무부', role: '부장', permission: '관리자', joinedAt: '2026-03-01' },
-  { id: 'm3', name: '박지훈', studentId: '20260003', department: '기획국', role: '국장', permission: '편집자', joinedAt: '2026-03-02' },
-  { id: 'm4', name: '최예은', studentId: '20260004', department: '홍보국', role: '국장', permission: '편집자', joinedAt: '2026-03-02' },
-  { id: 'm5', name: '정다은', studentId: '20260005', department: '복지국', role: '국장', permission: '편집자', joinedAt: '2026-03-03' },
-  { id: 'm6', name: '윤성호', studentId: '20260006', department: '대외협력', role: '부장', permission: '편집자', joinedAt: '2026-03-03' },
-  { id: 'm7', name: '한지원', studentId: '20260007', department: '기획국', role: '팀장', permission: '편집자', joinedAt: '2026-03-05' },
-  { id: 'm8', name: '오승현', studentId: '20260008', department: '홍보국', role: '일반', permission: '뷰어', joinedAt: '2026-03-05' },
-  { id: 'm9', name: '임수아', studentId: '20260009', department: '복지국', role: '일반', permission: '뷰어', joinedAt: '2026-03-06' },
-  { id: 'm10', name: '강도윤', studentId: '20260010', department: '총무부', role: '팀장', permission: '편집자', joinedAt: '2026-03-06' },
-  { id: 'm11', name: '신예림', studentId: '20260011', department: '기획국', role: '일반', permission: '뷰어', joinedAt: '2026-03-07' },
-  { id: 'm12', name: '조현우', studentId: '20260012', department: '대외협력', role: '일반', permission: '뷰어', joinedAt: '2026-03-07' },
-]
-
-const defaultEditForm = { department: '' as Department | '', role: '' as Role | '', permission: '' as Permission | '' }
+const defaultEditForm = { department: '' as Department | '', permission: '' as Permission | '' }
 
 export default function OrgPage() {
   const toast = useToast()
-  const [members, setMembers] = useState<Member[]>(initialMembers)
+  const currentCohortId = useCohortStore((state) => state.currentCohortId)
+  const requestedCohortId = useRef<string | null>(null)
+  const [members, setMembers] = useState<Member[]>([])
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('')
   const [permFilter, setPermFilter] = useState('')
   const [editTarget, setEditTarget] = useState<Member | null>(null)
   const [editForm, setEditForm] = useState(defaultEditForm)
 
-  const filtered = members.filter((m) => {
-    if (search && !m.name.includes(search) && !m.studentId.includes(search)) return false
+  useEffect(() => {
+    if (!currentCohortId || requestedCohortId.current === currentCohortId) return
+    requestedCohortId.current = currentCohortId
+    void apiRequest<ApiMember[]>(buildApiPath('/api/org/members', { cohortId: currentCohortId }))
+      .then((nextMembers) => setMembers(nextMembers.map(toMember)))
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : '조직 멤버를 불러오지 못했습니다.')
+      })
+  }, [currentCohortId, toast])
+
+  const filtered = useMemo(() => members.filter((m) => {
+    const searchTarget = `${m.name} ${m.studentId} ${m.email}`
+    if (search && !searchTarget.includes(search)) return false
     if (deptFilter && m.department !== deptFilter) return false
     if (permFilter && m.permission !== permFilter) return false
     return true
-  })
+  }), [deptFilter, members, permFilter, search])
+
+  const permSummary = useMemo(() => PERMISSIONS.map((p) => ({
+    label: p,
+    count: members.filter((m) => m.permission === p).length,
+  })), [members])
 
   const openEdit = (m: Member) => {
     setEditTarget(m)
-    setEditForm({ department: m.department, role: m.role, permission: m.permission })
+    setEditForm({ department: m.department, permission: m.permission })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editTarget) return
-    if (!editForm.department || !editForm.role || !editForm.permission) {
-      toast.error('모든 항목을 선택해주세요.')
+    if (!editForm.department || !editForm.permission) {
+      toast.error('부서와 권한을 선택해주세요.')
       return
     }
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === editTarget.id
-          ? { ...m, department: editForm.department as Department, role: editForm.role as Role, permission: editForm.permission as Permission }
-          : m
-      )
-    )
-    toast.success(`${editTarget.name}님의 정보가 수정되었습니다.`)
-    setEditTarget(null)
-  }
 
-  const permSummary = PERMISSIONS.map((p) => ({
-    label: p,
-    count: members.filter((m) => m.permission === p).length,
-  }))
+    try {
+      const updated = await apiRequest<ApiMember>(`/api/org/members/${editTarget.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          role: permissionToApiRole(editForm.permission),
+          department: editForm.department === '전체' ? null : editForm.department,
+        }),
+      })
+      const nextMember = toMember(updated)
+      setMembers((prev) => prev.map((m) => (m.id === nextMember.id ? nextMember : m)))
+      toast.success(`${editTarget.name}님의 정보가 수정되었습니다.`)
+      setEditTarget(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '멤버 정보 수정에 실패했습니다.')
+    }
+  }
 
   return (
     <div>
@@ -96,7 +114,6 @@ export default function OrgPage() {
         description="멤버별 부서와 권한을 설정합니다."
       />
 
-      {/* 요약 카드 */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">전체 멤버</p>
@@ -106,20 +123,19 @@ export default function OrgPage() {
           <div key={label} className="card p-4">
             <p className="text-xs text-slate-500 mb-1">{label}</p>
             <p className="text-2xl font-bold text-slate-900">{count}명</p>
-            <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border ${PERMISSION_COLORS[label as Permission]}`}>{label}</span>
+            <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded border ${PERMISSION_COLORS[label]}`}>{label}</span>
           </div>
         ))}
       </div>
 
-      {/* 필터 */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="relative">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="이름, 학번 검색"
-            className="input pl-8 w-48"
+            placeholder="이름, 학번, 이메일 검색"
+            className="input pl-8 w-56"
           />
         </div>
         <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="select-input w-36">
@@ -140,12 +156,11 @@ export default function OrgPage() {
         )}
       </div>
 
-      {/* 테이블 */}
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              {['이름', '학번', '부서', '역할', '권한', '가입일', ''].map((h) => (
+              {['이름', '학번', '이메일', '부서', '권한', '가입일', ''].map((h) => (
                 <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -162,9 +177,9 @@ export default function OrgPage() {
               filtered.map((m) => (
                 <tr key={m.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 text-sm font-semibold text-slate-900">{m.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-500 font-mono">{m.studentId}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500 font-mono">{m.studentId || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">{m.email || '-'}</td>
                   <td className="px-4 py-3"><DepartmentTag department={m.department} /></td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{m.role}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block text-xs px-2 py-0.5 rounded border font-medium ${PERMISSION_COLORS[m.permission]}`}>
                       {m.permission}
@@ -186,7 +201,6 @@ export default function OrgPage() {
         </table>
       </div>
 
-      {/* 수정 모달 */}
       <Modal
         open={!!editTarget}
         onClose={() => setEditTarget(null)}
@@ -207,7 +221,7 @@ export default function OrgPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900">{editTarget.name}</p>
-                <p className="text-xs text-slate-500">{editTarget.studentId}</p>
+                <p className="text-xs text-slate-500">{editTarget.studentId || editTarget.email}</p>
               </div>
             </div>
             <div>
@@ -222,17 +236,6 @@ export default function OrgPage() {
               </select>
             </div>
             <div>
-              <label className="label">역할</label>
-              <select
-                value={editForm.role}
-                onChange={(e) => setEditForm({ ...editForm, role: e.target.value as Role })}
-                className="select-input"
-              >
-                <option value="">선택</option>
-                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-            <div>
               <label className="label">권한</label>
               <div className="grid grid-cols-3 gap-2 mt-1">
                 {PERMISSIONS.map((p) => (
@@ -242,7 +245,7 @@ export default function OrgPage() {
                     onClick={() => setEditForm({ ...editForm, permission: p })}
                     className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
                       editForm.permission === p
-                        ? PERMISSION_COLORS[p] + ' ring-2 ring-offset-1 ring-blue-400'
+                        ? `${PERMISSION_COLORS[p]} ring-2 ring-offset-1 ring-blue-400`
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
@@ -252,9 +255,9 @@ export default function OrgPage() {
                 ))}
               </div>
               <div className="mt-3 space-y-1.5 text-xs text-slate-500">
-                <p><span className="font-semibold text-red-600">관리자</span> — 모든 기능 접근 및 설정 변경 가능</p>
-                <p><span className="font-semibold text-blue-600">편집자</span> — 데이터 등록·수정 가능, 설정 제외</p>
-                <p><span className="font-semibold text-slate-600">뷰어</span> — 조회만 가능</p>
+                <p><span className="font-semibold text-red-600">관리자</span> - 멤버 승인과 조직 설정 가능</p>
+                <p><span className="font-semibold text-blue-600">편집자</span> - 데이터 등록 및 수정 가능</p>
+                <p><span className="font-semibold text-slate-600">뷰어</span> - 조회만 가능</p>
               </div>
             </div>
           </div>
@@ -262,4 +265,29 @@ export default function OrgPage() {
       </Modal>
     </div>
   )
+}
+
+function toMember(member: ApiMember): Member {
+  return {
+    id: String(member.id),
+    userId: String(member.userId),
+    name: member.name,
+    email: member.email ?? '',
+    studentId: member.studentId ?? '',
+    department: member.department ?? '기타',
+    permission: apiRoleToPermission(member.role),
+    joinedAt: member.joinedAt?.slice(0, 10) ?? '-',
+  }
+}
+
+function apiRoleToPermission(role?: string): Permission {
+  if (role === 'ADMIN') return '관리자'
+  if (role === 'VIEWER') return '뷰어'
+  return '편집자'
+}
+
+function permissionToApiRole(permission: Permission): ApiMemberRole {
+  if (permission === '관리자') return 'ADMIN'
+  if (permission === '뷰어') return 'VIEWER'
+  return 'EDITOR'
 }

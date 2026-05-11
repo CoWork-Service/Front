@@ -36,6 +36,26 @@ type TokenResponse = {
   joinStatus?: string
 }
 
+type JwtPayload = Record<string, string | number | null | undefined>
+
+function pickTokenValue(payload: JwtPayload, keys: string[]) {
+  for (const key of keys) {
+    const value = payload[key]
+    if (value !== null && value !== undefined) return value
+  }
+  return undefined
+}
+
+function tokenString(value: string | number | null | undefined) {
+  if (value === null || value === undefined) return undefined
+  return String(value)
+}
+
+function tokenNullableString(value: string | number | null | undefined) {
+  if (value === null) return null
+  return tokenString(value)
+}
+
 export const AUTH_KEYS = {
   auth: 'cowork_auth',
   accessToken: 'cowork_access_token',
@@ -137,15 +157,15 @@ export function userFromToken(accessToken: string): AuthUser {
   if (!payload) return {}
 
   return {
-    userId: payload.userId ?? payload.id ?? payload.sub,
-    name: payload.name,
-    email: payload.email,
-    studentId: payload.studentId ?? payload.student_id ?? payload.studentNumber ?? payload.sIdno,
-    department: payload.department,
-    organizationId: payload.organizationId ?? payload.orgId,
-    organizationName: payload.organizationName ?? payload.orgName,
-    role: payload.role ?? payload.authority,
-    joinStatus: normalizeJoinStatus(payload.joinStatus),
+    userId: pickTokenValue(payload, ['userId', 'id', 'sub']),
+    name: tokenString(payload.name),
+    email: tokenNullableString(payload.email),
+    studentId: tokenString(pickTokenValue(payload, ['studentId', 'student_id', 'studentNumber', 'sIdno'])),
+    department: tokenNullableString(payload.department),
+    organizationId: pickTokenValue(payload, ['organizationId', 'orgId']),
+    organizationName: tokenString(pickTokenValue(payload, ['organizationName', 'orgName'])),
+    role: tokenString(pickTokenValue(payload, ['role', 'authority'])),
+    joinStatus: normalizeJoinStatus(tokenString(payload.joinStatus)),
   }
 }
 
@@ -189,7 +209,7 @@ export async function registerSsoUser(payload: {
   return body.data
 }
 
-function decodeJwtPayload(token: string): Record<string, any> | null {
+function decodeJwtPayload(token: string): JwtPayload | null {
   const [, payload] = token.split('.')
   if (!payload) return null
 
@@ -202,7 +222,7 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
         .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
         .join(''),
     )
-    return JSON.parse(json) as Record<string, any>
+    return JSON.parse(json) as JwtPayload
   } catch {
     return null
   }

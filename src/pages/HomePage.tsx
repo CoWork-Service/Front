@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Star, CheckSquare, RotateCcw, Flag, Check, Trash2, Edit2, CalendarDays, MapPin, ArrowRight } from 'lucide-react'
+import { Plus, Flag, Check, Trash2, Edit2, CalendarDays, MapPin, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMemoStore } from '../store/useMemoStore'
 import { useCohortStore } from '../store/useCohortStore'
@@ -204,7 +204,7 @@ export default function HomePage() {
     setModalOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) {
       toast.error('제목을 입력해주세요.')
       return
@@ -219,20 +219,28 @@ export default function HomePage() {
       status: form.status,
       author: '김민준',
     }
-    if (editTarget) {
-      updateMemo(editTarget.id, data)
-      toast.success('메모가 수정되었습니다.')
-    } else {
-      addMemo(data)
-      toast.success('새 메모가 작성되었습니다.')
+    try {
+      if (editTarget) {
+        await updateMemo(editTarget.id, data)
+        toast.success('메모가 수정되었습니다.')
+      } else {
+        await addMemo(data)
+        toast.success('새 메모가 작성되었습니다.')
+      }
+      setModalOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '메모 저장에 실패했습니다.')
     }
-    setModalOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    deleteMemo(id)
-    toast.success('메모가 삭제되었습니다.')
-    setDeleteConfirm(null)
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMemo(id)
+      toast.success('메모가 삭제되었습니다.')
+      setDeleteConfirm(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '메모 삭제에 실패했습니다.')
+    }
   }
 
   const filterButtons: { key: Filter; label: string }[] = [

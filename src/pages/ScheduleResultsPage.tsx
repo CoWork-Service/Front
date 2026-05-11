@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Users, Trophy } from 'lucide-react'
 import { useScheduleStore } from '../store/useScheduleStore'
@@ -34,39 +34,48 @@ const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 
 export default function TimetableResultsPage() {
   const { pollId } = useParams<{ pollId: string }>()
-  const { schedules } = useScheduleStore()
+  const { schedules, loadScheduleDetail } = useScheduleStore()
   const tt = schedules.find((t) => t.id === pollId)
+  const [loadError, setLoadError] = useState('')
+  const requestedPollId = useRef<string | null>(null)
+  const responses = tt?.responses ?? []
 
-  if (!tt) return <div className="p-8 text-slate-500">조율을 찾을 수 없습니다.</div>
-
-  const dates = generateDates(tt.dateRange.start, tt.dateRange.end)
-  const times = generateTimes(tt.timeRange.start, tt.timeRange.end, tt.slotMinutes)
-  const totalResponses = tt.responses.length
+  useEffect(() => {
+    if (!pollId || tt || requestedPollId.current === pollId) return
+    requestedPollId.current = pollId
+    void loadScheduleDetail(pollId).catch((error) => {
+      setLoadError(error instanceof Error ? error.message : '일정 조율을 불러오지 못했습니다.')
+    })
+  }, [loadScheduleDetail, pollId, tt])
 
   // 슬롯별 응답 수 계산
-  const slotCounts = useMemo(() => {
-    const map: Record<string, number> = {}
-    tt.responses.forEach((r) => {
-      r.availableSlots.forEach((slot) => {
-        const key = `${slot.date}_${slot.time}`
-        map[key] = (map[key] ?? 0) + 1
-      })
+  const slotCounts: Record<string, number> = {}
+  responses.forEach((r) => {
+    r.availableSlots.forEach((slot) => {
+      const key = `${slot.date}_${slot.time}`
+      slotCounts[key] = (slotCounts[key] ?? 0) + 1
     })
-    return map
-  }, [tt.responses])
+  })
 
   const maxCount = Math.max(...Object.values(slotCounts), 1)
 
   // 가장 많이 겹치는 시간대
-  const topSlots = useMemo(() => {
-    return Object.entries(slotCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([key, count]) => {
-        const [date, time] = key.split('_')
-        return { date, time, count }
-      })
-  }, [slotCounts])
+  const topSlots = Object.entries(slotCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([key, count]) => {
+      const [date, time] = key.split('_')
+      return { date, time, count }
+    })
+
+  if (!tt) {
+    const isLoading = Boolean(pollId && !loadError)
+    return <div className="p-8 text-slate-500">{isLoading ? '일정 조율을 불러오는 중입니다.' : loadError || '조율을 찾을 수 없습니다.'}</div>
+  }
+
+  const dates = generateDates(tt.dateRange.start, tt.dateRange.end)
+  const times = generateTimes(tt.timeRange.start, tt.timeRange.end, tt.slotMinutes)
+  const totalResponses = responses.length
 
   const getHeatmapColor = (count: number) => {
     if (count === 0) return 'bg-slate-100 border-slate-200'
@@ -77,7 +86,7 @@ export default function TimetableResultsPage() {
     return 'bg-blue-100 border-blue-200'
   }
 
-  const respondedNames = tt.responses.map((r) => r.participantName)
+  const respondedNames = responses.map((r) => r.participantName)
   const notResponded = tt.participants.filter((p) => !respondedNames.includes(p))
 
   return (

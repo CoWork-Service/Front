@@ -1,16 +1,26 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, Calendar, Users, Save, X, Paperclip, CalendarDays } from 'lucide-react'
+import { Edit2, Trash2, Calendar, Users, Save, X, Paperclip, CalendarDays } from 'lucide-react'
 import { useWorkspaceStore } from '../store/useWorkspaceStore'
 import { useEventStore } from '../store/useEventStore'
 import { useCohortStore } from '../store/useCohortStore'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
+import type { Meeting } from '../types'
+
+const emptyMeetingForm = {
+  title: '',
+  date: '',
+  attendees: '',
+  agenda: '',
+  content: '',
+  eventId: '',
+}
 
 export default function MeetingDetailPage() {
   const { departmentId, meetingId } = useParams<{ departmentId: string; meetingId: string }>()
   const navigate = useNavigate()
-  const { workspaces, updateMeeting, deleteMeeting } = useWorkspaceStore()
+  const { workspaces, updateMeeting, deleteMeeting, loadWorkspaces } = useWorkspaceStore()
   const { events } = useEventStore()
   const { currentCohortId } = useCohortStore()
   const toast = useToast()
@@ -22,34 +32,51 @@ export default function MeetingDetailPage() {
 
   const [editing, setEditing] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
-  const [form, setForm] = useState({
-    title: meeting?.title ?? '',
-    date: meeting?.date ?? '',
-    attendees: meeting?.attendees.join(', ') ?? '',
-    agenda: meeting?.agenda ?? '',
-    content: meeting?.content ?? '',
-    eventId: meeting?.eventId ?? '',
-  })
+  const [form, setForm] = useState(emptyMeetingForm)
+  const [loadError, setLoadError] = useState('')
+  const [loadedCohortId, setLoadedCohortId] = useState('')
+  const requestedCohortId = useRef<string | null>(null)
 
-  if (!workspace || !meeting) return <div className="p-8 text-slate-500">회의록을 찾을 수 없습니다.</div>
+  useEffect(() => {
+    if (!currentCohortId || meeting || requestedCohortId.current === currentCohortId) return
+    requestedCohortId.current = currentCohortId
+    void loadWorkspaces(currentCohortId)
+      .then(() => setLoadedCohortId(currentCohortId))
+      .catch((error) => {
+        setLoadError(error instanceof Error ? error.message : '회의록을 불러오지 못했습니다.')
+      })
+  }, [currentCohortId, loadWorkspaces, meeting])
 
-  const handleSave = () => {
-    updateMeeting(workspace.id, meeting.id, {
-      title: form.title,
-      date: form.date,
-      attendees: form.attendees.split(',').map((a) => a.trim()).filter(Boolean),
-      agenda: form.agenda,
-      content: form.content,
-      eventId: form.eventId || undefined,
-    })
-    toast.success('회의록이 수정되었습니다.')
-    setEditing(false)
+  if (!workspace || !meeting) {
+    const isLoading = Boolean(!loadError && (!currentCohortId || loadedCohortId !== currentCohortId))
+    return <div className="p-8 text-slate-500">{isLoading ? '회의록을 불러오는 중입니다.' : loadError || '회의록을 찾을 수 없습니다.'}</div>
   }
 
-  const handleDelete = () => {
-    deleteMeeting(workspace.id, meeting.id)
-    toast.success('회의록이 삭제되었습니다.')
-    navigate(`/workspaces/${workspace.id}`)
+  const handleSave = async () => {
+    try {
+      await updateMeeting(workspace.id, meeting.id, {
+        title: form.title,
+        date: form.date,
+        attendees: form.attendees.split(',').map((a) => a.trim()).filter(Boolean),
+        agenda: form.agenda,
+        content: form.content,
+        eventId: form.eventId || undefined,
+      })
+      toast.success('회의록이 수정되었습니다.')
+      setEditing(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '회의록 수정에 실패했습니다.')
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteMeeting(workspace.id, meeting.id)
+      toast.success('회의록이 삭제되었습니다.')
+      navigate(`/workspaces/${workspace.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '회의록 삭제에 실패했습니다.')
+    }
   }
 
   return (
@@ -81,7 +108,7 @@ export default function MeetingDetailPage() {
             </>
           ) : (
             <>
-              <button onClick={() => setEditing(true)} className="btn-secondary"><Edit2 size={15} />수정</button>
+              <button onClick={() => { setForm(meetingToForm(meeting)); setEditing(true) }} className="btn-secondary"><Edit2 size={15} />수정</button>
               <button onClick={() => setDeleteConfirm(true)} className="btn-danger"><Trash2 size={15} />삭제</button>
             </>
           )}
@@ -181,4 +208,15 @@ export default function MeetingDetailPage() {
       </Modal>
     </div>
   )
+}
+
+function meetingToForm(meeting: Meeting) {
+  return {
+    title: meeting.title,
+    date: meeting.date,
+    attendees: meeting.attendees.join(', '),
+    agenda: meeting.agenda,
+    content: meeting.content,
+    eventId: meeting.eventId ?? '',
+  }
 }

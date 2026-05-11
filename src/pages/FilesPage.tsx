@@ -61,6 +61,7 @@ export default function FilesPage() {
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
   const [search, setSearch] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadFiles, setUploadFiles] = useState<globalThis.File[]>([])
   const [uploadEventId, setUploadEventId] = useState('')
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
@@ -149,56 +150,79 @@ export default function FilesPage() {
     } else {
       setUploadEventId('')
     }
+    setUploadFiles([])
     setUploadOpen(true)
   }
 
-  const handleUpload = () => {
-    const newFile: Omit<FileItem, 'id' | 'logs'> = {
-      cohortId: currentCohortId,
-      name: '업로드된 파일.pdf',
-      type: 'file',
-      mimeType: 'application/pdf',
-      size: 512000,
-      parentId: viewMode === 'folder' ? currentFolderId : undefined,
-      path: '/업로드된 파일.pdf',
-      uploadedBy: '김민준',
-      updatedAt: new Date().toISOString(),
-      eventId: uploadEventId || undefined,
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) {
+      toast.error('업로드할 파일을 선택해주세요.')
+      return
     }
-    addFile(newFile)
-    toast.success('파일이 업로드되었습니다.')
-    setUploadOpen(false)
+    try {
+      for (const selected of uploadFiles) {
+        await addFile({
+          cohortId: currentCohortId,
+          name: selected.name,
+          type: 'file',
+          mimeType: selected.type,
+          size: selected.size,
+          parentId: viewMode === 'folder' ? currentFolderId : undefined,
+          path: selected.name,
+          uploadedBy: '사용자',
+          updatedAt: new Date().toISOString(),
+          eventId: uploadEventId || undefined,
+        }, selected)
+      }
+      toast.success('파일이 업로드되었습니다.')
+      setUploadOpen(false)
+      setUploadFiles([])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '파일 업로드에 실패했습니다.')
+    }
   }
 
-  const handleNewFolder = () => {
+  const handleNewFolder = async () => {
     if (!newFolderName.trim()) return
-    addFolder({
-      cohortId: currentCohortId,
-      name: newFolderName.trim(),
-      type: 'folder',
-      parentId: currentFolderId,
-      path: `/${newFolderName.trim()}`,
-      updatedAt: new Date().toISOString(),
-    })
-    toast.success(`'${newFolderName}' 폴더가 생성되었습니다.`)
-    setNewFolderName('')
-    setNewFolderOpen(false)
+    try {
+      await addFolder({
+        cohortId: currentCohortId,
+        name: newFolderName.trim(),
+        type: 'folder',
+        parentId: currentFolderId,
+        path: `/${newFolderName.trim()}`,
+        updatedAt: new Date().toISOString(),
+      })
+      toast.success(`'${newFolderName}' 폴더가 생성되었습니다.`)
+      setNewFolderName('')
+      setNewFolderOpen(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '폴더 생성에 실패했습니다.')
+    }
   }
 
-  const handleRename = () => {
+  const handleRename = async () => {
     if (!renameTarget || !newName.trim()) return
-    renameFile(renameTarget.id, newName.trim(), '김민준')
-    toast.success('이름이 변경되었습니다.')
-    if (selectedFile?.id === renameTarget.id) setSelectedFile({ ...selectedFile, name: newName.trim() })
-    setRenameOpen(false)
-    setRenameTarget(null)
+    try {
+      await renameFile(renameTarget.id, newName.trim(), '김민준')
+      toast.success('이름이 변경되었습니다.')
+      if (selectedFile?.id === renameTarget.id) setSelectedFile({ ...selectedFile, name: newName.trim() })
+      setRenameOpen(false)
+      setRenameTarget(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '이름 변경에 실패했습니다.')
+    }
   }
 
-  const handleDelete = (item: FileItem) => {
-    deleteFile(item.id)
-    if (selectedFile?.id === item.id) setSelectedFile(null)
-    toast.success('삭제되었습니다.')
-    setDeleteConfirm(null)
+  const handleDelete = async (item: FileItem) => {
+    try {
+      await deleteFile(item.id)
+      if (selectedFile?.id === item.id) setSelectedFile(null)
+      toast.success('삭제되었습니다.')
+      setDeleteConfirm(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '삭제에 실패했습니다.')
+    }
   }
 
   // 현재 선택된 행사 라벨
@@ -516,7 +540,7 @@ export default function FilesPage() {
                   value={selectedFile.eventId ?? ''}
                   onChange={(e) => {
                     const val = e.target.value || undefined
-                    updateFileEvent(selectedFile.id, val)
+                    void updateFileEvent(selectedFile.id, val)
                     setSelectedFile({ ...selectedFile, eventId: val })
                     toast.success(val ? '행사에 연결되었습니다.' : '연결이 해제되었습니다.')
                   }}
@@ -581,7 +605,7 @@ export default function FilesPage() {
         <button onClick={handleUpload} className="btn-primary">업로드</button></>
       }>
         <div className="space-y-4">
-          <FileUploadDropzone multiple label="파일을 드래그하거나 클릭하여 업로드" hint="더미 모드: 실제 파일은 저장되지 않습니다." />
+          <FileUploadDropzone multiple label="파일을 드래그하거나 클릭하여 업로드" hint="선택한 파일은 S3에 저장됩니다." onFiles={setUploadFiles} />
           <div>
             <label className="label">연결 행사 (선택)</label>
             <select value={uploadEventId} onChange={(e) => setUploadEventId(e.target.value)} className="select-input">
