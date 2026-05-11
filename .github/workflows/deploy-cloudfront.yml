@@ -42,7 +42,7 @@ jobs:
           fi
 
           if [ -z "$VITE_API_BASE_URL" ]; then
-            echo "::warning::VITE_API_BASE_URL is empty. The frontend will use its local default API URL."
+            echo "VITE_API_BASE_URL=https://3-35-27-121.sslip.io" >> "$GITHUB_ENV"
           fi
 
           echo "ready=true" >> "$GITHUB_OUTPUT"
