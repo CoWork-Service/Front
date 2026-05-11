@@ -9,7 +9,6 @@ import {
   Loader2,
   LogOut,
   Plus,
-  Search,
   ShieldCheck,
   Trash2,
   TriangleAlert,
@@ -106,6 +105,10 @@ export default function OnboardingPage() {
 
   const handleJoin = async (event: FormEvent) => {
     event.preventDefault()
+    if (!form.inviteCode.trim()) {
+      setSubmitError('초대코드를 입력해주세요.')
+      return
+    }
     await submitOnboarding(false)
   }
 
@@ -133,7 +136,7 @@ export default function OnboardingPage() {
       organizationName: councilMember ? form.councilName.trim() || 'A:NSWER' : profile.organizationName,
       organizationDepartments,
       role: councilMember ? 'ADMIN' : 'EDITOR',
-      joinStatus: councilMember ? 'ACTIVE' : 'PENDING',
+      joinStatus: 'ACTIVE',
     }
 
     try {
@@ -283,7 +286,7 @@ export default function OnboardingPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900">기존 학생회 가입하기</p>
-                <p className="text-xs text-slate-500 mt-1">학생회에 가입 신청을 보내고 승인을 기다립니다.</p>
+                <p className="text-xs text-slate-500 mt-1">공유받은 초대코드를 입력하면 바로 가입됩니다.</p>
               </div>
             </button>
           </div>
@@ -430,45 +433,20 @@ export default function OnboardingPage() {
             </button>
 
             <div>
-              <label className="label">소속</label>
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={form.department}
-                  onChange={(event) => setForm({ ...form, department: event.target.value })}
-                  className="input pl-9"
-                  placeholder="AI소프트웨어학부"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="label">이메일</label>
-                <input
-                  type="email"
-                  value={form.email || ''}
-                  onChange={(event) => setForm({ ...form, email: event.target.value })}
-                  className="input"
-                  placeholder="name@soongsil.ac.kr"
-                />
-              </div>
-              <div>
-                <label className="label">초대코드</label>
-                <input
-                  value={form.inviteCode}
-                  onChange={(event) => setForm({ ...form, inviteCode: event.target.value.toUpperCase() })}
-                  className="input font-mono"
-                  placeholder="선택 입력"
-                />
-              </div>
+              <label className="label">초대코드</label>
+              <input
+                value={form.inviteCode}
+                onChange={(event) => setForm({ ...form, inviteCode: event.target.value.toUpperCase() })}
+                className="input font-mono"
+                placeholder="예: XK9M2P7Q4R8T1AZ6"
+              />
             </div>
 
             {submitError && <p className="text-sm text-red-600">{submitError}</p>}
 
             <button type="submit" className="btn-primary w-full justify-center py-2.5" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
-              가입 신청하기
+              바로 가입하기
             </button>
           </form>
         )}

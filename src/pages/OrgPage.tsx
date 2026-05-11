@@ -130,10 +130,10 @@ export default function OrgPage() {
   const handleCopyInvite = async () => {
     if (!inviteCode) return
     try {
-      await navigator.clipboard.writeText(inviteCode)
-      toast.success('초대코드가 복사되었습니다.')
+      await navigator.clipboard.writeText(buildInviteShareText(inviteCode))
+      toast.success('초대 문구가 복사되었습니다.')
     } catch {
-      toast.error('초대코드를 복사하지 못했습니다.')
+      toast.error('초대 문구를 복사하지 못했습니다.')
     }
   }
 
@@ -248,7 +248,7 @@ export default function OrgPage() {
             {inviteCode && (
               <button onClick={handleCopyInvite} className="btn-secondary">
                 <Copy size={14} />
-                복사
+                공유 문구 복사
               </button>
             )}
             <button onClick={handleGenerateInvite} className="btn-primary" disabled={isGeneratingInvite}>
@@ -260,7 +260,8 @@ export default function OrgPage() {
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            새 초대코드를 발급하면 기존 초대코드는 더 이상 사용할 수 없습니다.
+            학생회를 만든 뒤 이 초대코드를 공유하세요. 초대코드로 가입한 학생은 승인 없이 바로 들어옵니다.
+            재발급하면 이전 코드는 무효화됩니다.
           </p>
           <div>
             <label className="label">현재 발급된 초대코드</label>
@@ -337,6 +338,17 @@ export default function OrgPage() {
       </Modal>
     </div>
   )
+}
+
+function buildInviteShareText(inviteCode: string) {
+  const origin = window.location.origin || 'https://cowork.kro.kr'
+  return [
+    'CoWork 학생회 초대코드입니다.',
+    '아래 링크에서 숭실대 SSO로 로그인한 뒤 초대코드를 입력하면 바로 가입됩니다.',
+    '',
+    `링크: ${origin}/login`,
+    `초대코드: ${inviteCode}`,
+  ].join('\n')
 }
 
 function toMember(member: ApiMember): Member {
