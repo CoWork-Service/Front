@@ -42,7 +42,7 @@ jobs:
           fi
 
           if [ -z "$VITE_API_BASE_URL" ]; then
-            echo "VITE_API_BASE_URL=https://3-35-27-121.sslip.io" >> "$GITHUB_ENV"
+            echo "VITE_API_BASE_URL=https://3-35-27-121.nip.io" >> "$GITHUB_ENV"
           fi
 
           echo "ready=true" >> "$GITHUB_OUTPUT"
