@@ -25,7 +25,7 @@ type CalEvent = {
   id: string
   label: string
   date?: string        // 단일 날짜 이벤트 (회의록)
-  start?: string       // 기간 이벤트 (조율)
+  start?: string       // 기간 이벤트 (행사)
   end?: string
   color: string        // tailwind bg class
   href: string
@@ -62,30 +62,30 @@ export default function TimetablesPage() {
       .flatMap((ws) => ws.meetings.map((m) => ({ ...m, wsId: ws.id })))
   }, [workspaces, currentCohortId])
 
-  // 캘린더 이벤트 합산
+  // 캘린더에는 확정된 행사와 워크스페이스 회의만 표시한다.
   const calEvents: CalEvent[] = useMemo(() => {
-    const events: CalEvent[] = []
-    cohortTimetables.forEach((tt) => {
-      events.push({
-        id: tt.id,
-        label: tt.title,
-        start: tt.dateRange.start,
-        end: tt.dateRange.end,
-        color: tt.status === 'open' ? 'bg-blue-500' : 'bg-slate-400',
-        href: `/schedules/${tt.id}/results`,
+    const items: CalEvent[] = []
+    cohortEvents.forEach((event) => {
+      items.push({
+        id: `event-${event.id}`,
+        label: event.name,
+        start: event.startDate,
+        end: event.endDate,
+        color: 'bg-blue-500',
+        href: `/events/${event.id}`,
       })
     })
     cohortMeetings.forEach((m) => {
-      events.push({
-        id: m.id,
+      items.push({
+        id: `meeting-${m.id}`,
         label: m.title,
         date: m.date,
         color: 'bg-green-500',
         href: `/workspaces/${m.wsId}/meetings/${m.id}`,
       })
     })
-    return events
-  }, [cohortTimetables, cohortMeetings])
+    return items
+  }, [cohortEvents, cohortMeetings])
 
   // 달력 날짜 계산
   const firstDay = new Date(calYear, calMonth, 1).getDay() // 0=일
@@ -232,10 +232,7 @@ export default function TimetablesPage() {
               <p className="text-xs font-semibold text-slate-500 mb-2">범례</p>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 shrink-0" />진행중 시간 조율
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-slate-400 shrink-0" />마감된 시간 조율
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 shrink-0" />행사
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-600">
                   <span className="w-2.5 h-2.5 rounded-sm bg-green-500 shrink-0" />워크스페이스 회의

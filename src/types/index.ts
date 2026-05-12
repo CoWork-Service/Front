@@ -18,6 +18,7 @@ export type Cohort = {
   id: string
   label: string // '2026 기수'
   year: number
+  organizationName?: string
 }
 
 // ==================== 인계 메모 ====================
