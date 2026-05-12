@@ -19,7 +19,7 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-  VITE_API_BASE_URL: https://api.cowork.kro.kr
+  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
 jobs:
   deploy:
@@ -39,6 +39,10 @@ jobs:
             echo "::warning::Skipping CloudFront deployment. Missing secrets: ${missing[*]}"
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+
+          if [ -z "$VITE_API_BASE_URL" ]; then
+            echo "VITE_API_BASE_URL=https://3-35-27-121.nip.io" >> "$GITHUB_ENV"
           fi
 
           echo "ready=true" >> "$GITHUB_OUTPUT"
