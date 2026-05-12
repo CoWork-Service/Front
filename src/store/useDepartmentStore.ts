@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { fetchOrganizationDepartments } from '../lib/backendApi'
+import { mergeDepartmentOptions } from '../lib/departments'
 import { DEPARTMENTS, type Department } from '../types'
 
 interface DepartmentState {
@@ -17,7 +18,7 @@ export const useDepartmentStore = create<DepartmentState>((set) => ({
     set({ isLoading: true, error: undefined })
     try {
       const departments = await fetchOrganizationDepartments()
-      set({ departments: departments.length > 0 ? departments : DEPARTMENTS, isLoading: false })
+      set({ departments: mergeDepartmentOptions(departments), isLoading: false })
     } catch (error) {
       set({
         departments: DEPARTMENTS,

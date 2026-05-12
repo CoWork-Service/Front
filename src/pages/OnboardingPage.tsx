@@ -24,10 +24,11 @@ import {
   saveAuthSession,
   type AuthUser,
 } from '../lib/auth'
+import { REQUIRED_DEPARTMENT } from '../lib/departments'
 
 type Mode = 'select' | 'create' | 'departments' | 'join' | 'pending'
 
-const DEFAULT_DEPARTMENTS = ['회장단', '기획국', '총무부', '홍보국', '복지국']
+const DEFAULT_DEPARTMENTS = [REQUIRED_DEPARTMENT, '기획국', '총무부', '홍보국', '복지국']
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -53,7 +54,7 @@ export default function OnboardingPage() {
     inviteCode: '',
     presidentConfirmed: false,
   })
-  const [departmentRows, setDepartmentRows] = useState(['', '', '', '', ''])
+  const [departmentRows, setDepartmentRows] = useState([...DEFAULT_DEPARTMENTS])
 
   useEffect(() => {
     if (!tempToken) return
@@ -115,10 +116,12 @@ export default function OnboardingPage() {
   }
 
   const updateDepartmentRow = (index: number, value: string) => {
+    if (index === 0) return
     setDepartmentRows((prev) => prev.map((department, rowIndex) => (rowIndex === index ? value : department)))
   }
 
   const removeDepartmentRow = (index: number) => {
+    if (index === 0) return
     setDepartmentRows((prev) => (prev.length <= 1 ? prev : prev.filter((_, rowIndex) => rowIndex !== index)))
   }
 
@@ -373,19 +376,26 @@ export default function OnboardingPage() {
               {departmentRows.map((department, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input
-                    value={department}
+                    value={index === 0 ? REQUIRED_DEPARTMENT : department}
                     onChange={(event) => updateDepartmentRow(index, event.target.value)}
-                    className="input"
+                    readOnly={index === 0}
+                    className={`input ${index === 0 ? 'bg-slate-50 text-slate-700 font-semibold' : ''}`}
                     placeholder={DEFAULT_DEPARTMENTS[index] || `부서 ${index + 1}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => removeDepartmentRow(index)}
-                    className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 shrink-0"
-                    title="부서 삭제"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {index === 0 ? (
+                    <span className="px-2.5 py-2 rounded-lg border border-blue-100 bg-blue-50 text-xs font-semibold text-blue-700 shrink-0">
+                      필수
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => removeDepartmentRow(index)}
+                      className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 shrink-0"
+                      title="부서 삭제"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -469,6 +479,17 @@ function OnboardingShell({ children }: { children: ReactNode }) {
 }
 
 function resolveDepartmentRows(rows: string[]) {
-  const names = rows.map((department) => department.trim()).filter(Boolean)
+  const seen = new Set<string>()
+  const names: string[] = []
+
+  const add = (department: string) => {
+    const normalized = department.trim()
+    if (!normalized || seen.has(normalized)) return
+    seen.add(normalized)
+    names.push(normalized)
+  }
+
+  add(REQUIRED_DEPARTMENT)
+  rows.forEach(add)
   return names.length > 0 ? names : DEFAULT_DEPARTMENTS
 }

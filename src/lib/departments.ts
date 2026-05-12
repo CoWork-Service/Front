@@ -1,5 +1,7 @@
 import { DEPARTMENTS, type Department } from '../types'
 
+export const REQUIRED_DEPARTMENT = '회장단'
+
 export function mergeDepartmentOptions(
   departments: readonly Department[] = DEPARTMENTS,
   extras: readonly (Department | string | null | undefined)[] = [],
@@ -14,6 +16,7 @@ export function mergeDepartmentOptions(
     result.push(normalized)
   }
 
+  add(REQUIRED_DEPARTMENT)
   departments.forEach(add)
   extras.forEach(add)
 
