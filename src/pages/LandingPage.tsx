@@ -66,16 +66,10 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link to="/login" className="btn-primary text-base px-6 py-3">
+            <div className="flex items-center">
+              <Link to="/login" className="btn-primary text-base px-8 py-3 w-full sm:w-72 justify-center">
                 시작하기
                 <ArrowRight size={18} />
-              </Link>
-              <Link
-                to="/home"
-                className="btn-secondary text-base px-6 py-3"
-              >
-                서비스 둘러보기
               </Link>
             </div>
           </div>
