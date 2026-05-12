@@ -4,7 +4,7 @@ import { useCohortStore } from '../../store/useCohortStore'
 import type { Cohort } from '../../types'
 
 function formatCohortLabel(cohort: Cohort) {
-  return [cohort.organizationName, cohort.label].filter(Boolean).join(' ') || '기수 없음'
+  return [cohort.label, cohort.organizationName].filter(Boolean).join(' ') || '기수 없음'
 }
 
 export function CohortSelector() {
