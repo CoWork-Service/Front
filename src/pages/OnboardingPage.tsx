@@ -28,6 +28,13 @@ import {
 type Mode = 'select' | 'create' | 'departments' | 'join' | 'pending'
 
 const DEFAULT_DEPARTMENTS = ['회장단', '기획국', '총무부', '홍보국', '복지국']
+const SOONGSIL_EMAIL_DOMAIN = '@soongsil.ac.kr'
+
+function resolveSoongsilEmail(email?: string | null, studentId?: string | null) {
+  const normalized = email?.trim().toLowerCase()
+  if (normalized?.endsWith(SOONGSIL_EMAIL_DOMAIN)) return normalized
+  return studentId ? `${studentId}${SOONGSIL_EMAIL_DOMAIN}` : ''
+}
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -63,11 +70,12 @@ export default function OnboardingPage() {
       try {
         setIsLoading(true)
         const nextProfile = await fetchSsoProfile(tempToken)
-        setProfile((prev) => ({ ...prev, ...nextProfile }))
+        const nextEmail = resolveSoongsilEmail(nextProfile.email, nextProfile.studentId)
+        setProfile((prev) => ({ ...prev, ...nextProfile, email: nextEmail || undefined }))
         setForm((prev) => ({
           ...prev,
           department: prev.department || nextProfile.department || '',
-          email: nextProfile.email || prev.email || '',
+          email: nextEmail || prev.email || '',
         }))
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : 'SSO 프로필을 불러오지 못했습니다.')
@@ -128,12 +136,12 @@ export default function OnboardingPage() {
     setSubmitError('')
     setIsSubmitting(true)
     const organizationDepartments = councilMember ? resolveDepartmentRows(departmentRows) : undefined
-    const ssoEmail = profile.email || ''
-    const resolvedEmail = councilMember ? form.email || ssoEmail : ssoEmail
+    const ssoEmail = resolveSoongsilEmail(profile.email, profile.studentId)
+    const resolvedEmail = councilMember ? resolveSoongsilEmail(form.email || ssoEmail, profile.studentId) : ssoEmail
 
     const nextUser: AuthUser = {
       ...profile,
-      email: resolvedEmail || profile.email,
+      email: resolvedEmail || undefined,
       department: form.department || profile.department,
       organizationName: councilMember ? form.councilName.trim() || 'A:NSWER' : profile.organizationName,
       organizationDepartments,
@@ -200,7 +208,7 @@ export default function OnboardingPage() {
   const displayName = profile.name || 'SSO 사용자'
   const displayStudentId = profile.studentId || '학번 확인 중'
   const displayDepartment = profile.department || form.department || '소속 확인 중'
-  const displayEmail = profile.email || (profile.studentId ? `${profile.studentId}@soongsil.ac.kr` : '')
+  const displayEmail = resolveSoongsilEmail(profile.email || form.email, profile.studentId)
 
   if (isLoading) {
     return (
@@ -340,9 +348,9 @@ export default function OnboardingPage() {
                 <label className="label">이메일</label>
                 <input
                   type="email"
-                  value={form.email || ''}
-                  onChange={(event) => setForm({ ...form, email: event.target.value })}
-                  className="input"
+                  value={form.email || displayEmail}
+                  readOnly
+                  className="input bg-slate-50 text-slate-600"
                   placeholder="name@soongsil.ac.kr"
                 />
               </div>
