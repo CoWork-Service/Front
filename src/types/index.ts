@@ -100,7 +100,8 @@ export type RentalRecord = {
   id: string
   borrowerName: string
   studentId: string
-  contact: string
+  managerName?: string
+  idCardSubmitted: boolean
   rentedAt: string
   dueAt: string
   returnedAt?: string

@@ -324,8 +324,9 @@ export type ApiRental = {
   id: number
   assetId: number
   borrowerName: string
-  studentId: string
-  contact: string
+  studentId?: string | null
+  managerName?: string | null
+  idCardSubmitted?: boolean | null
   rentedAt: string
   dueAt: string
   returnedAt?: string | null
@@ -357,8 +358,9 @@ export function toRental(item: ApiRental): RentalRecord {
   return {
     id: String(item.id),
     borrowerName: item.borrowerName,
-    studentId: item.studentId,
-    contact: item.contact,
+    studentId: item.studentId ?? '',
+    managerName: item.managerName ?? undefined,
+    idCardSubmitted: Boolean(item.idCardSubmitted),
     rentedAt: item.rentedAt.slice(0, 10),
     dueAt: item.dueAt.slice(0, 10),
     returnedAt: item.returnedAt?.slice(0, 10) ?? undefined,

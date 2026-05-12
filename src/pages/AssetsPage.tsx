@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { Plus, Search, Edit2, ArrowRightLeft, Image } from 'lucide-react'
 import { useAssetStore } from '../store/useAssetStore'
 import { useCohortStore } from '../store/useCohortStore'
@@ -9,6 +9,7 @@ import { Drawer } from '../components/common/Drawer'
 import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
+import { getStoredUser } from '../lib/auth'
 import type { Asset, RentalRecord } from '../types'
 
 const defaultAssetForm = {
@@ -17,14 +18,15 @@ const defaultAssetForm = {
 }
 
 const defaultRentForm = {
-  borrowerName: '', studentId: '', contact: '',
-  rentedAt: '', dueAt: '', quantity: '1', note: '',
+  borrowerName: '', studentId: '', managerName: '',
+  rentedAt: '', dueAt: '', quantity: '1', idCardSubmitted: false, note: '',
 }
 
 export default function AssetsPage() {
   const { currentCohortId } = useCohortStore()
-  const { assets, addAsset, updateAsset, deleteAsset, rentAsset, returnAsset } = useAssetStore()
+  const { assets, addAsset, updateAsset, deleteAsset, rentAsset, updateRental, returnAsset } = useAssetStore()
   const toast = useToast()
+  const userName = getStoredUser()?.name ?? ''
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -35,6 +37,7 @@ export default function AssetsPage() {
   const [assetForm, setAssetForm] = useState(defaultAssetForm)
   const [rentModalOpen, setRentModalOpen] = useState(false)
   const [rentForm, setRentForm] = useState(defaultRentForm)
+  const [rentalEditTarget, setRentalEditTarget] = useState<RentalRecord | null>(null)
   const [returnConfirm, setReturnConfirm] = useState<{ assetId: string; rental: RentalRecord } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
@@ -50,7 +53,30 @@ export default function AssetsPage() {
     return list
   }, [cohortAssets, search, statusFilter])
 
+  useEffect(() => {
+    if (!selectedAsset) return
+    const updated = assets.find((a) => a.id === selectedAsset.id)
+    if (updated) setSelectedAsset(updated)
+  }, [assets, selectedAsset?.id])
+
   const openCreate = () => { setEditTarget(null); setAssetForm(defaultAssetForm); setAssetPhotoFile(null); setAssetFormOpen(true) }
+  const openRent = () => {
+    setRentForm({ ...defaultRentForm, rentedAt: new Date().toISOString().slice(0, 10), managerName: userName })
+    setRentModalOpen(true)
+  }
+  const openRentalEdit = (rental: RentalRecord) => {
+    setRentalEditTarget(rental)
+    setRentForm({
+      borrowerName: rental.borrowerName,
+      studentId: rental.studentId,
+      managerName: rental.managerName ?? '',
+      rentedAt: rental.rentedAt,
+      dueAt: rental.dueAt,
+      quantity: String(rental.quantity),
+      idCardSubmitted: rental.idCardSubmitted,
+      note: rental.note ?? '',
+    })
+  }
   const openEdit = (a: Asset) => {
     setEditTarget(a)
     setAssetPhotoFile(null)
@@ -106,7 +132,8 @@ export default function AssetsPage() {
       await rentAsset(selectedAsset.id, {
         borrowerName: rentForm.borrowerName,
         studentId: rentForm.studentId,
-        contact: rentForm.contact,
+        managerName: rentForm.managerName,
+        idCardSubmitted: rentForm.idCardSubmitted,
         rentedAt: rentForm.rentedAt,
         dueAt: rentForm.dueAt,
         quantity: Number(rentForm.quantity) || 1,
@@ -119,6 +146,31 @@ export default function AssetsPage() {
       setRentForm(defaultRentForm)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '대여 처리에 실패했습니다.')
+    }
+  }
+
+  const handleUpdateRental = async () => {
+    if (!selectedAsset || !rentalEditTarget) return
+    if (!rentForm.borrowerName || !rentForm.rentedAt || !rentForm.dueAt) {
+      toast.error('대여자명, 대여일, 반납 예정일은 필수입니다.')
+      return
+    }
+    try {
+      await updateRental(selectedAsset.id, rentalEditTarget.id, {
+        borrowerName: rentForm.borrowerName,
+        studentId: rentForm.studentId,
+        managerName: rentForm.managerName,
+        idCardSubmitted: rentForm.idCardSubmitted,
+        rentedAt: rentForm.rentedAt,
+        dueAt: rentForm.dueAt,
+        quantity: Number(rentForm.quantity) || 1,
+        note: rentForm.note,
+      })
+      toast.success('대여 기록이 수정되었습니다.')
+      setRentalEditTarget(null)
+      setRentForm(defaultRentForm)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '대여 기록 수정에 실패했습니다.')
     }
   }
 
@@ -232,7 +284,7 @@ export default function AssetsPage() {
               <Edit2 size={15} />수정
             </button>
             {selectedAsset && selectedAsset.availableQuantity > 0 && (
-              <button onClick={() => setRentModalOpen(true)} className="btn-primary flex-1 justify-center">
+              <button onClick={openRent} className="btn-primary flex-1 justify-center">
                 <ArrowRightLeft size={15} />대여
               </button>
             )}
@@ -277,15 +329,25 @@ export default function AssetsPage() {
                           {r.returnedAt ? '반납 완료' : '대여 중'}
                         </span>
                       </div>
-                      <p className="text-slate-500">{r.studentId} · {r.contact}</p>
+                      <p className="text-slate-500">학번: {r.studentId || '-'}</p>
+                      <p className="text-slate-500">담당자: {r.managerName || '-'}</p>
+                      <p className={r.idCardSubmitted ? 'text-green-700' : 'text-slate-500'}>
+                        신분증: {r.idCardSubmitted ? '제출' : '미제출'}
+                      </p>
                       <p className="text-slate-500">대여: {r.rentedAt} → 반납 예정: {r.dueAt}</p>
+                      <p className="text-slate-500">수량: {r.quantity}개</p>
                       {r.returnedAt && <p className="text-green-700">반납일: {r.returnedAt}</p>}
-                      {!r.returnedAt && (
-                        <button onClick={() => setReturnConfirm({ assetId: selectedAsset.id, rental: r })}
-                          className="mt-1.5 text-amber-700 hover:underline font-medium">
-                          반납 처리
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <button onClick={() => openRentalEdit(r)} className="text-slate-600 hover:underline font-medium">
+                          수정
                         </button>
-                      )}
+                        {!r.returnedAt && (
+                          <button onClick={() => setReturnConfirm({ assetId: selectedAsset.id, rental: r })}
+                            className="text-amber-700 hover:underline font-medium">
+                            반납 처리
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -326,10 +388,33 @@ export default function AssetsPage() {
         <div className="grid grid-cols-2 gap-4">
           <div><label className="label">대여자명 *</label><input type="text" value={rentForm.borrowerName} onChange={(e) => setRentForm({ ...rentForm, borrowerName: e.target.value })} className="input" /></div>
           <div><label className="label">학번</label><input type="text" value={rentForm.studentId} onChange={(e) => setRentForm({ ...rentForm, studentId: e.target.value })} className="input" /></div>
-          <div><label className="label">연락처</label><input type="text" value={rentForm.contact} onChange={(e) => setRentForm({ ...rentForm, contact: e.target.value })} className="input" /></div>
+          <div><label className="label">담당자</label><input type="text" value={rentForm.managerName} onChange={(e) => setRentForm({ ...rentForm, managerName: e.target.value })} className="input" /></div>
           <div><label className="label">수량</label><input type="number" value={rentForm.quantity} onChange={(e) => setRentForm({ ...rentForm, quantity: e.target.value })} className="input" /></div>
           <div><label className="label">대여일 *</label><input type="date" value={rentForm.rentedAt} onChange={(e) => setRentForm({ ...rentForm, rentedAt: e.target.value })} className="input" /></div>
           <div><label className="label">반납 예정일 *</label><input type="date" value={rentForm.dueAt} onChange={(e) => setRentForm({ ...rentForm, dueAt: e.target.value })} className="input" /></div>
+          <label className="col-span-2 flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={rentForm.idCardSubmitted} onChange={(e) => setRentForm({ ...rentForm, idCardSubmitted: e.target.checked })} />
+            신분증 제출
+          </label>
+          <div className="col-span-2"><label className="label">비고</label><input type="text" value={rentForm.note} onChange={(e) => setRentForm({ ...rentForm, note: e.target.value })} className="input" /></div>
+        </div>
+      </Modal>
+
+      {/* 대여 기록 수정 모달 */}
+      <Modal open={!!rentalEditTarget} onClose={() => setRentalEditTarget(null)} title="대여 기록 수정" size="md"
+        footer={<><button onClick={() => setRentalEditTarget(null)} className="btn-secondary">취소</button><button onClick={handleUpdateRental} className="btn-primary">저장</button></>}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <div><label className="label">대여자명 *</label><input type="text" value={rentForm.borrowerName} onChange={(e) => setRentForm({ ...rentForm, borrowerName: e.target.value })} className="input" /></div>
+          <div><label className="label">학번</label><input type="text" value={rentForm.studentId} onChange={(e) => setRentForm({ ...rentForm, studentId: e.target.value })} className="input" /></div>
+          <div><label className="label">담당자</label><input type="text" value={rentForm.managerName} onChange={(e) => setRentForm({ ...rentForm, managerName: e.target.value })} className="input" /></div>
+          <div><label className="label">수량</label><input type="number" value={rentForm.quantity} onChange={(e) => setRentForm({ ...rentForm, quantity: e.target.value })} className="input" /></div>
+          <div><label className="label">대여일 *</label><input type="date" value={rentForm.rentedAt} onChange={(e) => setRentForm({ ...rentForm, rentedAt: e.target.value })} className="input" /></div>
+          <div><label className="label">반납 예정일 *</label><input type="date" value={rentForm.dueAt} onChange={(e) => setRentForm({ ...rentForm, dueAt: e.target.value })} className="input" /></div>
+          <label className="col-span-2 flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={rentForm.idCardSubmitted} onChange={(e) => setRentForm({ ...rentForm, idCardSubmitted: e.target.checked })} />
+            신분증 제출
+          </label>
           <div className="col-span-2"><label className="label">비고</label><input type="text" value={rentForm.note} onChange={(e) => setRentForm({ ...rentForm, note: e.target.value })} className="input" /></div>
         </div>
       </Modal>

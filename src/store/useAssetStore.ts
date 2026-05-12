@@ -12,6 +12,7 @@ interface AssetStore {
   updateAsset: (id: string, data: Partial<Asset>, photo?: File | null) => Promise<void>
   deleteAsset: (id: string) => Promise<void>
   rentAsset: (assetId: string, record: Omit<RentalRecord, 'id'>) => Promise<void>
+  updateRental: (assetId: string, rentalId: string, record: Partial<RentalRecord>) => Promise<void>
   returnAsset: (assetId: string, rentalId: string) => Promise<void>
 }
 
@@ -58,7 +59,9 @@ export const useAssetStore = create<AssetStore>((set) => ({
       body: JSON.stringify({
         borrowerName: record.borrowerName,
         studentId: record.studentId,
-        contact: record.contact,
+        managerName: record.managerName,
+        idCardSubmitted: record.idCardSubmitted ?? false,
+        rentedAt: record.rentedAt.length <= 10 ? `${record.rentedAt}T00:00:00` : record.rentedAt,
         dueAt: record.dueAt.length <= 10 ? `${record.dueAt}T23:59:00` : record.dueAt,
         quantity: record.quantity,
         note: record.note,
@@ -76,6 +79,25 @@ export const useAssetStore = create<AssetStore>((set) => ({
           rentalHistory: [...a.rentalHistory, newRecord],
         }
       }),
+    }))
+  },
+  updateRental: async (assetId, rentalId, record) => {
+    await apiRequest<ApiRental>(`/api/assets/${assetId}/rentals/${rentalId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        borrowerName: record.borrowerName,
+        studentId: record.studentId,
+        managerName: record.managerName,
+        idCardSubmitted: record.idCardSubmitted ?? false,
+        rentedAt: record.rentedAt ? (record.rentedAt.length <= 10 ? `${record.rentedAt}T00:00:00` : record.rentedAt) : undefined,
+        dueAt: record.dueAt ? (record.dueAt.length <= 10 ? `${record.dueAt}T23:59:00` : record.dueAt) : undefined,
+        quantity: record.quantity,
+        note: record.note,
+      }),
+    })
+    const detail = await apiRequest<{ asset: ApiAsset; rentals: ApiRental[] }>(`/api/assets/${assetId}`)
+    set((state) => ({
+      assets: state.assets.map((a) => (a.id === assetId ? toAsset(detail.asset, detail.rentals) : a)),
     }))
   },
   returnAsset: async (assetId, rentalId) => {
