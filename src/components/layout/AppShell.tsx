@@ -5,6 +5,7 @@ import { TopHeader } from '../common/TopHeader'
 import { useAssetStore } from '../../store/useAssetStore'
 import { useBudgetStore } from '../../store/useBudgetStore'
 import { useCohortStore } from '../../store/useCohortStore'
+import { useDepartmentStore } from '../../store/useDepartmentStore'
 import { useEventStore } from '../../store/useEventStore'
 import { useFileStore } from '../../store/useFileStore'
 import { useMemoStore } from '../../store/useMemoStore'
@@ -15,6 +16,7 @@ import { useWorkspaceStore } from '../../store/useWorkspaceStore'
 
 export function AppShell() {
   const { currentCohortId, loadCohorts } = useCohortStore()
+  const loadDepartments = useDepartmentStore((state) => state.loadDepartments)
   const loadAssets = useAssetStore((state) => state.loadAssets)
   const loadExpenses = useBudgetStore((state) => state.loadExpenses)
   const loadEvents = useEventStore((state) => state.loadEvents)
@@ -26,8 +28,8 @@ export function AppShell() {
   const loadWorkspaces = useWorkspaceStore((state) => state.loadWorkspaces)
 
   React.useEffect(() => {
-    void loadCohorts()
-  }, [loadCohorts])
+    void Promise.allSettled([loadCohorts(), loadDepartments()])
+  }, [loadCohorts, loadDepartments])
 
   React.useEffect(() => {
     if (!currentCohortId) return

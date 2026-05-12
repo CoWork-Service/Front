@@ -5,8 +5,9 @@ import { DepartmentTag } from '../components/common/DepartmentTag'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 import { apiRequest, buildApiPath } from '../lib/api'
+import { mergeDepartmentOptions } from '../lib/departments'
 import { useCohortStore } from '../store/useCohortStore'
-import { DEPARTMENTS } from '../types'
+import { useDepartmentStore } from '../store/useDepartmentStore'
 import type { Department } from '../types'
 
 type ApiMemberRole = 'ADMIN' | 'EDITOR' | 'VIEWER'
@@ -50,6 +51,7 @@ const defaultEditForm = { department: '' as Department | '', permission: '' as P
 export default function OrgPage() {
   const toast = useToast()
   const currentCohortId = useCohortStore((state) => state.currentCohortId)
+  const departments = useDepartmentStore((state) => state.departments)
   const requestedCohortId = useRef<string | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [search, setSearch] = useState('')
@@ -83,6 +85,14 @@ export default function OrgPage() {
     label: p,
     count: members.filter((m) => m.permission === p).length,
   })), [members])
+  const departmentOptions = useMemo(
+    () => mergeDepartmentOptions(departments, [
+      ...members.map((member) => member.department),
+      editForm.department,
+      deptFilter,
+    ]),
+    [departments, members, editForm.department, deptFilter]
+  )
 
   const openEdit = (m: Member) => {
     setEditTarget(m)
@@ -175,7 +185,7 @@ export default function OrgPage() {
         </div>
         <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="select-input w-36">
           <option value="">전체 부서</option>
-          {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          {departmentOptions.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         <select value={permFilter} onChange={(e) => setPermFilter(e.target.value)} className="select-input w-32">
           <option value="">전체 권한</option>
@@ -303,7 +313,7 @@ export default function OrgPage() {
                 className="select-input"
               >
                 <option value="">선택</option>
-                {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                {departmentOptions.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
             <div>

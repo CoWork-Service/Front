@@ -12,7 +12,8 @@ import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 import { apiRequest } from '../lib/api'
-import { DEPARTMENTS } from '../types'
+import { mergeDepartmentOptions } from '../lib/departments'
+import { useDepartmentStore } from '../store/useDepartmentStore'
 import type { Expense, Department, BudgetCategory, PaymentMethod, EventPhoto } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
@@ -227,6 +228,7 @@ export default function BudgetPage() {
   const { currentCohortId } = useCohortStore()
   const { expenses, addExpense, upsertExpense, updateExpense, deleteExpense } = useBudgetStore()
   const { events } = useEventStore()
+  const departments = useDepartmentStore((state) => state.departments)
   const toast = useToast()
 
   const cohortEvents = useMemo(
@@ -306,6 +308,15 @@ export default function BudgetPage() {
   const cohortExpenses = useMemo(
     () => expenses.filter((e) => e.cohortId === currentCohortId),
     [expenses, currentCohortId]
+  )
+
+  const departmentOptions = useMemo(
+    () => mergeDepartmentOptions(departments, [
+      ...cohortExpenses.map((expense) => expense.department),
+      form.department,
+      deptFilter,
+    ]),
+    [departments, cohortExpenses, form.department, deptFilter]
   )
 
   const filtered = useMemo(() => {
@@ -453,7 +464,7 @@ export default function BudgetPage() {
         </div>
         <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="select-input w-36">
           <option value="">전체 부서</option>
-          {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          {departmentOptions.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="select-input w-32">
           <option value="">전체 항목</option>
@@ -583,7 +594,7 @@ export default function BudgetPage() {
             <label className="label">부서 *</label>
             <select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value as Department })} className="select-input">
               <option value="">선택</option>
-              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+              {departmentOptions.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div>

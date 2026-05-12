@@ -29,6 +29,7 @@ import { useSurveyStore } from '../store/useSurveyStore'
 import { useScheduleStore } from '../store/useScheduleStore'
 import { useWorkspaceStore } from '../store/useWorkspaceStore'
 import { useCohortStore } from '../store/useCohortStore'
+import { useDepartmentStore } from '../store/useDepartmentStore'
 import { StatusBadge } from '../components/common/StatusBadge'
 import { SurveyStatusBadge, TimetableStatusBadge } from '../components/common/StatusBadge'
 import { Modal } from '../components/common/Modal'
@@ -46,7 +47,7 @@ import type {
   Survey,
   Timetable,
 } from '../types'
-import { DEPARTMENTS } from '../types'
+import { mergeDepartmentOptions } from '../lib/departments'
 
 // ── 상태 뱃지 헬퍼 ────────────────────────────────────────────────────────────
 
@@ -917,8 +918,13 @@ function EventEditModal({
   event: CoworkEvent
 }) {
   const { updateEvent } = useEventStore()
+  const departments = useDepartmentStore((state) => state.departments)
   const toast = useToast()
   const [form, setForm] = useState<EventEditFormState>(() => toEventEditFormState(event))
+  const departmentOptions = useMemo(
+    () => mergeDepartmentOptions(departments, [form.leadDepartment]),
+    [departments, form.leadDepartment]
+  )
 
   React.useEffect(() => {
     if (open) setForm(toEventEditFormState(event))
@@ -1026,7 +1032,7 @@ function EventEditModal({
           <div>
             <label className={labelCls}>주관부서</label>
             <select className={inputCls} value={form.leadDepartment} onChange={(e) => set('leadDepartment', e.target.value as Department)}>
-              {DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}
+              {departmentOptions.map((department) => <option key={department} value={department}>{department}</option>)}
             </select>
           </div>
           <div>

@@ -1,14 +1,6 @@
 // ==================== 공통 ====================
 
-export type Department =
-  | '전체'
-  | '회장단'
-  | '총무부'
-  | '복지국'
-  | '기획국'
-  | '홍보국'
-  | '대외협력'
-  | '기타'
+export type Department = string
 
 export const DEPARTMENTS: Department[] = [
   '회장단', '총무부', '복지국', '기획국', '홍보국', '대외협력', '기타',

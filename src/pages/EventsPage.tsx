@@ -8,8 +8,9 @@ import { StatusBadge } from '../components/common/StatusBadge'
 import { Modal } from '../components/common/Modal'
 import { EmptyState } from '../components/common/EmptyState'
 import { useToast } from '../components/common/Toast'
+import { mergeDepartmentOptions } from '../lib/departments'
+import { useDepartmentStore } from '../store/useDepartmentStore'
 import type { CoworkEvent, EventStatus, EventCategory, Department } from '../types'
-import { DEPARTMENTS } from '../types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -271,15 +272,25 @@ interface EventModalProps {
 
 function EventModal({ open, onClose, editTarget, currentCohortId }: EventModalProps) {
   const { addEvent, updateEvent } = useEventStore()
+  const departments = useDepartmentStore((state) => state.departments)
   const toast = useToast()
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
+  const baseDepartmentOptions = useMemo(() => mergeDepartmentOptions(departments), [departments])
+  const departmentOptions = useMemo(
+    () => mergeDepartmentOptions(departments, [form.leadDepartment]),
+    [departments, form.leadDepartment]
+  )
+  const defaultForm = useMemo(
+    () => ({ ...DEFAULT_FORM, leadDepartment: baseDepartmentOptions[0] ?? DEFAULT_FORM.leadDepartment }),
+    [baseDepartmentOptions]
+  )
 
   React.useEffect(() => {
     if (open) {
-      setForm(editTarget ? toFormState(editTarget) : DEFAULT_FORM)
+      setForm(editTarget ? toFormState(editTarget) : defaultForm)
     }
-  }, [open, editTarget])
+  }, [open, editTarget, defaultForm])
 
   function set(key: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -384,7 +395,7 @@ function EventModal({ open, onClose, editTarget, currentCohortId }: EventModalPr
           <div>
             <label className={labelCls}>주관부서</label>
             <select className={inputCls} value={form.leadDepartment} onChange={(e) => set('leadDepartment', e.target.value as Department)}>
-              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+              {departmentOptions.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div>

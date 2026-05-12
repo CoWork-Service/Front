@@ -10,7 +10,8 @@ import { DueDateBadge } from '../components/common/DueDateBadge'
 import { EmptyState } from '../components/common/EmptyState'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
-import { DEPARTMENTS } from '../types'
+import { mergeDepartmentOptions } from '../lib/departments'
+import { useDepartmentStore } from '../store/useDepartmentStore'
 import type { Memo, Department } from '../types'
 
 type Filter = 'all' | 'important' | 'open' | 'done'
@@ -137,6 +138,7 @@ export default function HomePage() {
   const { currentCohortId } = useCohortStore()
   const { memos, addMemo, updateMemo, deleteMemo, togglePriority, toggleStatus } = useMemoStore()
   const { events } = useEventStore()
+  const departments = useDepartmentStore((state) => state.departments)
   const toast = useToast()
 
   const upcomingEvents = useMemo(() => {
@@ -184,6 +186,7 @@ export default function HomePage() {
 
   const importantMemos = filtered.filter((m) => m.priority === 'important' && m.status === 'open')
   const otherMemos = filtered.filter((m) => !(m.priority === 'important' && m.status === 'open'))
+  const departmentOptions = useMemo(() => mergeDepartmentOptions(departments, [form.department]), [departments, form.department])
 
   const openCreateModal = () => {
     setEditTarget(null)
@@ -436,7 +439,7 @@ export default function HomePage() {
                 className="select-input"
               >
                 <option value="">선택 안함</option>
-                {DEPARTMENTS.map((d) => (
+                {departmentOptions.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>

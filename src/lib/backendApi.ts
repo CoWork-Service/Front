@@ -40,11 +40,15 @@ export function resolveResourceUrl(url?: string | null) {
   return `${getApiBaseUrl()}${url.startsWith('/') ? url : `/${url}`}`
 }
 
-const DEPARTMENT_VALUES: Department[] = ['전체', '회장단', '총무부', '복지국', '기획국', '홍보국', '대외협력', '기타']
-
 export function toDepartment(value?: string | null): Department | undefined {
-  if (!value) return undefined
-  return DEPARTMENT_VALUES.includes(value as Department) ? (value as Department) : '기타'
+  const normalized = value?.trim()
+  return normalized ? normalized : undefined
+}
+
+function departmentToApi(value?: Department | null) {
+  const normalized = value?.trim()
+  if (!normalized || normalized === '전체') return undefined
+  return normalized
 }
 
 export function toApiStatus(value?: string | null) {
@@ -117,7 +121,7 @@ export function eventToApiPayload(event: Partial<CoworkEvent>) {
     startDate: event.startDate,
     endDate: event.endDate,
     location: event.location,
-    leadDepartment: event.leadDepartment === '전체' ? undefined : event.leadDepartment,
+    leadDepartment: departmentToApi(event.leadDepartment),
     organizers: event.organizers ?? [],
     budget: event.budget,
     coverColor: event.coverColor,
@@ -197,7 +201,7 @@ export function memoToApiPayload(memo: Partial<Memo>) {
     cohortId: memo.cohortId ? Number(memo.cohortId) : undefined,
     title: memo.title,
     content: memo.content,
-    department: memo.department === '전체' ? undefined : memo.department,
+    department: departmentToApi(memo.department),
     priority: memo.priority === 'important' ? 'IMPORTANT' : 'NORMAL',
     status: memo.status === 'done' ? 'DONE' : 'OPEN',
     dueDate: memo.dueDate,
@@ -652,6 +656,19 @@ function toMeetingAttachment(item: ApiMeetingAttachment): MeetingAttachment {
 
 export async function fetchCohorts() {
   return (await apiRequest<Cohort[]>('/api/cohorts')).map((cohort) => ({ ...cohort, id: String(cohort.id) }))
+}
+
+type ApiOrganizationDepartment = {
+  id: number
+  name: string
+  sortOrder?: number | null
+}
+
+export async function fetchOrganizationDepartments() {
+  const departments = await apiRequest<ApiOrganizationDepartment[]>('/api/org/departments')
+  return departments
+    .map((department) => department.name?.trim())
+    .filter((department): department is string => Boolean(department))
 }
 
 export async function fetchEvents(cohortId: string) {
