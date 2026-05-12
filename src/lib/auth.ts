@@ -17,7 +17,6 @@ export type SsoProfile = {
   studentId: string
   name: string
   department?: string | null
-  email?: string | null
 }
 
 type ApiResponse<T> = {
@@ -187,7 +186,6 @@ export async function fetchSsoProfile(tempToken: string): Promise<SsoProfile> {
 
 export async function registerSsoUser(payload: {
   tempToken: string
-  email?: string | null
   councilMember: boolean
   cohortLabel?: string
   department?: string | null

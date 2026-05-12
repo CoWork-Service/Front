@@ -39,7 +39,6 @@ type Member = {
   id: string
   userId: string
   name: string
-  email: string
   studentId: string
   department: Department
   permission: Permission
@@ -73,7 +72,7 @@ export default function OrgPage() {
   }, [currentCohortId, toast])
 
   const filtered = useMemo(() => members.filter((m) => {
-    const searchTarget = `${m.name} ${m.studentId} ${m.email}`
+    const searchTarget = `${m.name} ${m.studentId}`
     if (search && !searchTarget.includes(search)) return false
     if (deptFilter && m.department !== deptFilter) return false
     if (permFilter && m.permission !== permFilter) return false
@@ -170,7 +169,7 @@ export default function OrgPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="이름, 학번, 이메일 검색"
+            placeholder="이름, 학번 검색"
             className="input pl-8 w-56"
           />
         </div>
@@ -196,7 +195,7 @@ export default function OrgPage() {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              {['이름', '학번', '이메일', '부서', '권한', '가입일', ''].map((h) => (
+              {['이름', '학번', '부서', '권한', '가입일', ''].map((h) => (
                 <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -204,7 +203,7 @@ export default function OrgPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-400">
                   <ShieldCheck size={28} className="mx-auto mb-2 text-slate-300" />
                   조건에 맞는 멤버가 없습니다.
                 </td>
@@ -214,7 +213,6 @@ export default function OrgPage() {
                 <tr key={m.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 text-sm font-semibold text-slate-900">{m.name}</td>
                   <td className="px-4 py-3 text-sm text-slate-500 font-mono">{m.studentId || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-500">{m.email || '-'}</td>
                   <td className="px-4 py-3"><DepartmentTag department={m.department} /></td>
                   <td className="px-4 py-3">
                     <span className={`inline-block text-xs px-2 py-0.5 rounded border font-medium ${PERMISSION_COLORS[m.permission]}`}>
@@ -294,7 +292,7 @@ export default function OrgPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900">{editTarget.name}</p>
-                <p className="text-xs text-slate-500">{editTarget.studentId || editTarget.email}</p>
+                <p className="text-xs text-slate-500">{editTarget.studentId || '-'}</p>
               </div>
             </div>
             <div>
@@ -356,7 +354,6 @@ function toMember(member: ApiMember): Member {
     id: String(member.id),
     userId: String(member.userId),
     name: member.name,
-    email: member.email ?? '',
     studentId: member.studentId ?? '',
     department: member.department ?? '기타',
     permission: apiRoleToPermission(member.role),
