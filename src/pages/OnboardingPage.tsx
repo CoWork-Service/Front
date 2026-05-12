@@ -32,11 +32,11 @@ const DEFAULT_DEPARTMENTS = ['회장단', '기획국', '총무부', '홍보국',
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const storedUser = getStoredUser()
   const tempToken = useMemo(
     () => searchParams.get('tempToken') || localStorage.getItem('cowork_sso_temp_token') || '',
     [searchParams],
   )
+  const storedUser = tempToken ? null : getStoredUser()
 
   const [mode, setMode] = useState<Mode>(
     localStorage.getItem('cowork_onboarding_status') === 'pending' ? 'pending' : 'select',
@@ -67,7 +67,7 @@ export default function OnboardingPage() {
         setForm((prev) => ({
           ...prev,
           department: prev.department || nextProfile.department || '',
-          email: prev.email || nextProfile.email || '',
+          email: nextProfile.email || prev.email || '',
         }))
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : 'SSO 프로필을 불러오지 못했습니다.')
@@ -128,10 +128,12 @@ export default function OnboardingPage() {
     setSubmitError('')
     setIsSubmitting(true)
     const organizationDepartments = councilMember ? resolveDepartmentRows(departmentRows) : undefined
+    const ssoEmail = profile.email || ''
+    const resolvedEmail = councilMember ? form.email || ssoEmail : ssoEmail
 
     const nextUser: AuthUser = {
       ...profile,
-      email: form.email || profile.email,
+      email: resolvedEmail || profile.email,
       department: form.department || profile.department,
       organizationName: councilMember ? form.councilName.trim() || 'A:NSWER' : profile.organizationName,
       organizationDepartments,
@@ -147,7 +149,7 @@ export default function OnboardingPage() {
 
       const response = await registerSsoUser({
         tempToken,
-        email: form.email || profile.email,
+        email: resolvedEmail || undefined,
         councilMember,
         cohortLabel: form.cohortLabel.trim() || '1기',
         department: form.department || profile.department,
@@ -198,6 +200,7 @@ export default function OnboardingPage() {
   const displayName = profile.name || 'SSO 사용자'
   const displayStudentId = profile.studentId || '학번 확인 중'
   const displayDepartment = profile.department || form.department || '소속 확인 중'
+  const displayEmail = profile.email || (profile.studentId ? `${profile.studentId}@soongsil.ac.kr` : '')
 
   if (isLoading) {
     return (
@@ -440,6 +443,11 @@ export default function OnboardingPage() {
                 className="input font-mono"
                 placeholder="예: XK9M2P7Q4R8T1AZ6"
               />
+            </div>
+
+            <div>
+              <label className="label">이메일</label>
+              <input value={displayEmail} className="input bg-slate-50 text-slate-600" readOnly />
             </div>
 
             {submitError && <p className="text-sm text-red-600">{submitError}</p>}
