@@ -7,7 +7,6 @@ import type {
   Cohort,
   CoworkEvent,
   Department,
-  EventCategory,
   EventPhoto,
   EventPhotoTag,
   EventStatus,
@@ -59,7 +58,7 @@ export type ApiEvent = {
   id: number
   cohortId: number
   name: string
-  category: string
+  category?: string | null
   status: string
   description?: string | null
   startDate: string
@@ -94,7 +93,6 @@ export function toEvent(item: ApiEvent, photos?: ApiEventPhoto[]): CoworkEvent {
     id: String(item.id),
     cohortId: String(item.cohortId),
     name: item.name,
-    category: (item.category || '기타') as EventCategory,
     status: eventStatus(item.status),
     description: item.description ?? undefined,
     startDate: item.startDate,
@@ -115,7 +113,6 @@ export function eventToApiPayload(event: Partial<CoworkEvent>) {
   return {
     cohortId: event.cohortId ? Number(event.cohortId) : undefined,
     name: event.name,
-    category: event.category,
     status: event.status,
     description: event.description,
     startDate: event.startDate,

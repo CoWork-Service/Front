@@ -10,7 +10,7 @@ import { EmptyState } from '../components/common/EmptyState'
 import { useToast } from '../components/common/Toast'
 import { mergeDepartmentOptions } from '../lib/departments'
 import { useDepartmentStore } from '../store/useDepartmentStore'
-import type { CoworkEvent, EventStatus, EventCategory, Department } from '../types'
+import type { CoworkEvent, EventStatus, Department } from '../types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -21,8 +21,6 @@ function isoDate(y: number, m: number, d: number) {
 function rangeContains(start: string, end: string, day: string) {
   return day >= start && day <= end
 }
-
-const EVENT_CATEGORIES: EventCategory[] = ['OT', '정기총회', 'MT', '체육대회', '축제', '간담회', '기타']
 
 const coverColorMap: Record<string, string> = {
   blue: 'bg-blue-500',
@@ -80,10 +78,6 @@ function EventCard({ event }: { event: CoworkEvent }) {
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className={`font-semibold text-slate-900 text-sm leading-snug flex-1`}>{event.name}</h3>
         {eventStatusBadge(event.status)}
-      </div>
-
-      <div className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-md mb-3 ${textClass} bg-slate-50 border border-slate-200`}>
-        {event.category}
       </div>
 
       <div className="space-y-1.5 text-xs text-slate-500">
@@ -221,7 +215,6 @@ function CalendarView({ events }: { events: CoworkEvent[] }) {
 
 type FormState = {
   name: string
-  category: EventCategory
   status: EventStatus
   startDate: string
   endDate: string
@@ -235,7 +228,6 @@ type FormState = {
 
 const DEFAULT_FORM: FormState = {
   name: '',
-  category: 'OT',
   status: 'planning',
   startDate: '',
   endDate: '',
@@ -250,7 +242,6 @@ const DEFAULT_FORM: FormState = {
 function toFormState(event: CoworkEvent): FormState {
   return {
     name: event.name,
-    category: event.category,
     status: event.status,
     startDate: event.startDate,
     endDate: event.endDate,
@@ -304,7 +295,6 @@ function EventModal({ open, onClose, editTarget, currentCohortId }: EventModalPr
     const payload = {
       cohortId: currentCohortId,
       name: form.name.trim(),
-      category: form.category,
       status: form.status,
       startDate: form.startDate,
       endDate: form.endDate,
@@ -357,22 +347,14 @@ function EventModal({ open, onClose, editTarget, currentCohortId }: EventModalPr
           <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="예: 4월 정기총회" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>카테고리</label>
-            <select className={inputCls} value={form.category} onChange={(e) => set('category', e.target.value as EventCategory)}>
-              {EVENT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>상태</label>
-            <select className={inputCls} value={form.status} onChange={(e) => set('status', e.target.value as EventStatus)}>
-              <option value="planning">기획중</option>
-              <option value="ongoing">진행중</option>
-              <option value="done">완료</option>
-              <option value="cancelled">취소</option>
-            </select>
-          </div>
+        <div>
+          <label className={labelCls}>상태</label>
+          <select className={inputCls} value={form.status} onChange={(e) => set('status', e.target.value as EventStatus)}>
+            <option value="planning">기획중</option>
+            <option value="ongoing">진행중</option>
+            <option value="done">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

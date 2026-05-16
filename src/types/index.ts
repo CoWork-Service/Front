@@ -252,15 +252,6 @@ export type Timetable = {
 
 export type EventStatus = 'planning' | 'ongoing' | 'done' | 'cancelled'
 
-export type EventCategory =
-  | 'OT'
-  | '정기총회'
-  | 'MT'
-  | '체육대회'
-  | '축제'
-  | '간담회'
-  | '기타'
-
 export type EventPhotoTag = '행사사진' | '증빙사진' | '준비과정' | '기타'
 
 export type EventPhoto = {
@@ -276,7 +267,6 @@ export type CoworkEvent = {
   id: string
   cohortId: string
   name: string
-  category: EventCategory
   status: EventStatus
   description?: string
   startDate: string
