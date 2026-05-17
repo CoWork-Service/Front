@@ -6,6 +6,11 @@ import type { BudgetCategory, PaymentMethod } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
+const formRowCls = 'grid grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-3 px-4 py-3 min-h-14'
+const amountRowCls = 'grid grid-cols-[4.75rem_minmax(0,1fr)_1.25rem] items-center gap-3 px-4 py-3 min-h-14'
+const formLabelCls = 'text-xs font-medium text-slate-500 whitespace-nowrap'
+const formControlCls = 'block w-full min-w-0 h-9 bg-transparent text-sm leading-5 text-slate-800 focus:outline-none placeholder:text-slate-300'
+const formSelectCls = `${formControlCls} pr-1`
 
 type Step = 'photo' | 'ocr' | 'form' | 'done'
 
@@ -238,12 +243,12 @@ export default function MobileRegisterPage() {
 
   // ── 공통 헤더 ─────────────────────────────────────────────────────────────────
   const Header = () => (
-    <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between shrink-0">
-      <div className="flex items-center gap-2">
-        <Receipt size={20} className="text-blue-600" />
-        <h1 className="text-base font-bold text-slate-900">지출 모바일 등록</h1>
+    <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between gap-3 shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <Receipt size={20} className="text-blue-600 shrink-0" />
+        <h1 className="text-base font-bold text-slate-900 truncate">지출 모바일 등록</h1>
       </div>
-      <span className="text-xs font-mono bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
+      <span className="text-xs font-mono bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full shrink-0">
         {formatRemaining(remaining)} 남음
       </span>
     </div>
@@ -358,83 +363,83 @@ export default function MobileRegisterPage() {
 
         {/* 입력 폼 */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">날짜</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>날짜</span>
             <input
               type="date"
               value={form.date}
               onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none"
+              className={formControlCls}
             />
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">거래처</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>거래처</span>
             <input
               type="text"
               value={form.vendor}
               onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value }))}
               placeholder="거래처명"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">금액</span>
+          <label className={amountRowCls}>
+            <span className={formLabelCls}>금액</span>
             <input
               type="number"
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               placeholder="0"
               inputMode="numeric"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
-            <span className="text-xs text-slate-400 shrink-0">원</span>
+            <span className="text-xs text-slate-400 text-right whitespace-nowrap">원</span>
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">카테고리</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>카테고리</span>
             <select
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as BudgetCategory }))}
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none"
+              className={formSelectCls}
             >
               <option value="">선택</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">결제수단</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>결제수단</span>
             <select
               value={form.paymentMethod}
               onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none"
+              className={formSelectCls}
             >
               <option value="">선택</option>
               {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">내용</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>내용</span>
             <input
               type="text"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="지출 내용"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">메모</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>메모</span>
             <input
               type="text"
               value={form.note}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               placeholder="선택 입력"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
           </label>
         </div>
