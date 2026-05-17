@@ -414,6 +414,20 @@ export default function BudgetPage() {
     })
   }
 
+  // 지출 내역 → 통장 내역 매칭 여부 (bankRows 없으면 null)
+  const isExpenseInBank = (expense: Expense): boolean | null => {
+    if (bankRows.length === 0) return null
+    return bankRows.some((row) => {
+      if (!row.dateTime) return false
+      if (expense.amount !== row.amount) return false
+      if (expense.receiptDatetime) {
+        const diff = Math.abs(new Date(expense.receiptDatetime).getTime() - new Date(row.dateTime).getTime())
+        return diff <= 60_000
+      }
+      return expense.date === row.dateTime.substring(0, 10)
+    })
+  }
+
   const handleReceiptFiles = async (files: File[]) => {
     const file = files[0] ?? null
     setForm((prev) => ({ ...prev, receiptFile: file }))
@@ -562,7 +576,37 @@ export default function BudgetPage() {
           <button onClick={() => { setSearch(''); setDeptFilter(''); setCategoryFilter(''); setEventFilter('') }}
             className="text-xs text-slate-500 hover:text-slate-700 underline">초기화</button>
         )}
+        <button
+          onClick={() => { setBankRows([]); setBankOpen(true) }}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap"
+        >
+          <FileSpreadsheet size={14} />
+          통장 내역 업로드
+        </button>
       </div>
+
+      {/* 통장 대사 결과 배너 */}
+      {bankRows.length > 0 && (
+        <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+          <FileSpreadsheet size={14} className="text-blue-500 shrink-0" />
+          <div className="flex items-center gap-3 text-sm flex-1 flex-wrap">
+            <span className="text-blue-700 font-medium">통장 대사 결과</span>
+            <span className="text-slate-500">총 {bankRows.length}건</span>
+            <span className="flex items-center gap-1 text-emerald-600">
+              <CheckCircle2 size={13} />매칭 <span className="font-semibold">{bankRows.filter(isBankRowMatched).length}</span>건
+            </span>
+            <span className="flex items-center gap-1 text-rose-500">
+              <XCircle size={13} />미매칭 <span className="font-semibold">{bankRows.length - bankRows.filter(isBankRowMatched).length}</span>건
+            </span>
+          </div>
+          <button onClick={() => setBankOpen(true)} className="text-xs text-blue-600 hover:text-blue-800 underline whitespace-nowrap">
+            상세 보기
+          </button>
+          <button onClick={() => setBankRows([])} className="text-xs text-slate-400 hover:text-slate-600 whitespace-nowrap ml-1">
+            ✕ 닫기
+          </button>
+        </div>
+      )}
 
       {/* 테이블 */}
       <div className="card overflow-hidden">
@@ -588,7 +632,11 @@ export default function BudgetPage() {
                   ? (linkedEvent.photos ?? []).filter((p) => e.photoIds?.includes(p.id))
                   : []
                 return (
-                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={e.id} className={`border-b border-slate-100 transition-colors ${
+                    bankRows.length > 0
+                      ? isExpenseInBank(e) ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-amber-50/60 hover:bg-amber-100/60'
+                      : 'hover:bg-slate-50'
+                  }`}>
                     <td className="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">{e.date}</td>
                     <td className="px-4 py-3"><DepartmentTag department={e.department} /></td>
                     <td className="px-4 py-3 text-sm text-slate-600">{e.category}</td>
@@ -634,6 +682,11 @@ export default function BudgetPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {bankRows.length > 0 && (
+                          isExpenseInBank(e)
+                            ? <CheckCircle2 size={13} className="text-emerald-500 mr-0.5 shrink-0" title="통장 매칭됨" />
+                            : <XCircle size={13} className="text-amber-400 mr-0.5 shrink-0" title="통장 미매칭" />
+                        )}
                         <button onClick={() => openEdit(e)} className="p-1 rounded text-slate-400 hover:text-slate-700"><Edit2 size={13} /></button>
                         <button onClick={() => setDeleteConfirm(e.id)} className="p-1 rounded text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
                       </div>
