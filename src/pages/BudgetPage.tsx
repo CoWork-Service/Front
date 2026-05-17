@@ -522,7 +522,7 @@ export default function BudgetPage() {
           <div className="flex items-center gap-2">
             <button onClick={() => { setBankRows([]); setBankOpen(true) }} className="btn-secondary flex items-center gap-1.5">
               <FileSpreadsheet size={16} />
-              통장 대사
+              통장 등록
             </button>
             <button onClick={openCreate} className="btn-primary">
               <Plus size={16} />
