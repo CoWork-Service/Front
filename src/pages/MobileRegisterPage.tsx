@@ -7,15 +7,6 @@ import type { BudgetCategory, PaymentMethod } from '../types'
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
 
-// OCR 시뮬레이션 샘플
-const OCR_SAMPLES = [
-  { vendor: '이마트', amount: 45600, category: '소모품' as BudgetCategory, description: '행사 준비물 구매' },
-  { vendor: '맥도날드', amount: 32000, category: '식대' as BudgetCategory, description: '팀원 식사' },
-  { vendor: '카페 라운지', amount: 18500, category: '식대' as BudgetCategory, description: '회의 음료' },
-  { vendor: 'CGV 인쇄소', amount: 12000, category: '인쇄비' as BudgetCategory, description: '홍보물 인쇄' },
-  { vendor: '다이소', amount: 8900, category: '소모품' as BudgetCategory, description: '행사 용품' },
-]
-
 type Step = 'photo' | 'ocr' | 'form' | 'done'
 
 type MobileSessionStatus = {
@@ -26,11 +17,31 @@ type MobileSessionStatus = {
   expiresAt: string
 }
 
+type ReceiptOcrResponse = {
+  date?: string | null
+  vendor?: string | null
+  amount?: number | null
+  paymentMethod?: string | null
+  category?: string | null
+  description?: string | null
+  cardCompany?: string | null
+  cardNumber?: string | null
+  approvalNumber?: string | null
+}
+
 function formatRemaining(ms: number) {
   const s = Math.ceil(ms / 1000)
   const m = Math.floor(s / 60)
   const sec = s % 60
   return `${m}:${String(sec).padStart(2, '0')}`
+}
+
+function asBudgetCategory(value?: string | null): BudgetCategory | '' {
+  return CATEGORIES.includes(value as BudgetCategory) ? value as BudgetCategory : ''
+}
+
+function asPaymentMethod(value?: string | null): PaymentMethod | '' {
+  return PAYMENT_METHODS.includes(value as PaymentMethod) ? value as PaymentMethod : ''
 }
 
 export default function MobileRegisterPage() {
@@ -100,28 +111,46 @@ export default function MobileRegisterPage() {
     return () => clearInterval(id)
   }, [session, isExpired])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !token) return
     const url = URL.createObjectURL(file)
     setSubmitError('')
     setImageFile(file)
     setImageUrl(url)
     setUploaded(false)
     setStep('ocr')
-    setTimeout(() => {
-      const sample = OCR_SAMPLES[Math.floor(Math.random() * OCR_SAMPLES.length)]
+
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const ocr = await apiRequest<ReceiptOcrResponse>(`/api/mobile/sessions/${token}/ocr`, {
+        method: 'POST',
+        body,
+      })
       setForm({
-        date: today,
-        vendor: sample.vendor,
-        category: sample.category,
-        amount: String(sample.amount),
-        paymentMethod: '개인카드',
-        description: sample.description,
+        date: ocr.date || today,
+        vendor: ocr.vendor || '',
+        category: asBudgetCategory(ocr.category),
+        amount: ocr.amount ? String(ocr.amount) : '',
+        paymentMethod: asPaymentMethod(ocr.paymentMethod),
+        description: ocr.description || '',
         note: '',
       })
+    } catch (error) {
+      setSubmitError(error instanceof Error ? `${error.message} 직접 입력해 주세요.` : 'OCR 분석에 실패했습니다. 직접 입력해 주세요.')
+      setForm((prev) => ({
+        ...prev,
+        date: today,
+        vendor: '',
+        category: '',
+        amount: '',
+        paymentMethod: '',
+        description: '',
+      }))
+    } finally {
       setStep('form')
-    }, 2000)
+    }
   }
 
   const handleSubmit = async () => {
