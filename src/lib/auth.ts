@@ -27,8 +27,6 @@ type ApiResponse<T> = {
 }
 
 type TokenResponse = {
-  accessToken?: string | null
-  refreshToken?: string | null
   userId?: number
   name?: string
   email?: string | null
@@ -99,42 +97,38 @@ export function hasAuthenticatedSession() {
 }
 
 export function hasSsoIdentity() {
-  return Boolean(
-    localStorage.getItem(AUTH_KEYS.accessToken) ||
-      localStorage.getItem(AUTH_KEYS.tempToken) ||
-      getStoredUser(),
-  )
+  return Boolean(localStorage.getItem(AUTH_KEYS.tempToken) || getStoredUser())
 }
 
 export function needsOnboarding() {
   return localStorage.getItem(AUTH_KEYS.onboardingRequired) === 'true'
 }
 
-export function saveAuthSession({
-  accessToken,
-  refreshToken,
-  tempToken,
-  user,
-  authenticated,
-  onboardingRequired = false,
-  onboardingStatus,
-}: {
-  accessToken?: string | null
-  refreshToken?: string | null
+export function saveAuthSession(options: {
   tempToken?: string | null
   user?: AuthUser | null
   authenticated?: boolean
   onboardingRequired?: boolean
   onboardingStatus?: 'select' | 'pending' | 'rejected'
 }) {
-  if (accessToken) localStorage.setItem(AUTH_KEYS.accessToken, accessToken)
-  if (refreshToken) localStorage.setItem(AUTH_KEYS.refreshToken, refreshToken)
+  const {
+    tempToken,
+    user,
+    authenticated,
+    onboardingRequired = false,
+    onboardingStatus,
+  } = options
+
+  localStorage.removeItem(AUTH_KEYS.accessToken)
+  localStorage.removeItem(AUTH_KEYS.refreshToken)
+
   if (tempToken) localStorage.setItem(AUTH_KEYS.tempToken, tempToken)
   if (user) localStorage.setItem(AUTH_KEYS.user, JSON.stringify(user))
 
+  const joinStatus = normalizeJoinStatus(user?.joinStatus)
   const isAuthenticated =
     authenticated ??
-    Boolean(accessToken && !onboardingRequired && user?.joinStatus !== 'PENDING' && user?.joinStatus !== 'REJECTED')
+    Boolean(user && !onboardingRequired && joinStatus !== 'PENDING' && joinStatus !== 'REJECTED')
 
   localStorage.setItem(AUTH_KEYS.auth, isAuthenticated ? 'true' : 'false')
   localStorage.setItem(AUTH_KEYS.onboardingRequired, onboardingRequired ? 'true' : 'false')
@@ -149,6 +143,18 @@ export function saveAuthSession({
 
 export function clearAuthSession() {
   Object.values(AUTH_KEYS).forEach((key) => localStorage.removeItem(key))
+}
+
+export async function logoutSession() {
+  try {
+    await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+  } catch {
+    // Local state must be cleared even if the network request is interrupted.
+  }
+  clearAuthSession()
 }
 
 export function userFromToken(accessToken: string): AuthUser {
@@ -174,7 +180,9 @@ export function parseBooleanParam(value: string | null) {
 }
 
 export async function fetchSsoProfile(tempToken: string): Promise<SsoProfile> {
-  const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/profile?tempToken=${encodeURIComponent(tempToken)}`)
+  const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/profile?tempToken=${encodeURIComponent(tempToken)}`, {
+    credentials: 'include',
+  })
   const body = (await response.json()) as ApiResponse<SsoProfile>
 
   if (!response.ok || body.success === false || !body.data) {
@@ -195,6 +203,7 @@ export async function registerSsoUser(payload: {
 }): Promise<TokenResponse> {
   const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/register`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })

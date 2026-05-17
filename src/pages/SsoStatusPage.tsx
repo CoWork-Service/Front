@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Clock3, LogOut, ShieldOff } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
-import { clearAuthSession, getStoredUser } from '../lib/auth'
+import { getStoredUser, logoutSession } from '../lib/auth'
 
 export default function SsoStatusPage({ status }: { status: 'pending' | 'rejected' }) {
   const navigate = useNavigate()
@@ -9,8 +9,9 @@ export default function SsoStatusPage({ status }: { status: 'pending' | 'rejecte
   const isPending = status === 'pending'
 
   const handleLogout = () => {
-    clearAuthSession()
-    navigate('/login', { replace: true })
+    void logoutSession().finally(() => {
+      navigate('/login', { replace: true })
+    })
   }
 
   return (

@@ -26,7 +26,6 @@ export default function SsoCallbackPage() {
 
       const tempToken = searchParams.get('tempToken')
       const accessToken = searchParams.get('accessToken') || searchParams.get('token')
-      const refreshToken = searchParams.get('refreshToken')
 
       if (tempToken) {
         saveAuthSession({
@@ -39,7 +38,10 @@ export default function SsoCallbackPage() {
         return
       }
 
-      if (!accessToken) {
+      const tokenUser = accessToken ? userFromToken(accessToken) : {}
+      const queryUser = userFromSearchParams(searchParams)
+
+      if (!accessToken && !hasUserIdentity(queryUser)) {
         if (hasAuthenticatedSession()) {
           navigate('/home', { replace: true })
           return
@@ -48,8 +50,6 @@ export default function SsoCallbackPage() {
         return
       }
 
-      const tokenUser = userFromToken(accessToken)
-      const queryUser = userFromSearchParams(searchParams)
       const user: AuthUser = {
         ...tokenUser,
         ...queryUser,
@@ -59,8 +59,6 @@ export default function SsoCallbackPage() {
 
       if (user.joinStatus === 'PENDING') {
         saveAuthSession({
-          accessToken,
-          refreshToken,
           user,
           authenticated: false,
           onboardingRequired: true,
@@ -72,8 +70,6 @@ export default function SsoCallbackPage() {
 
       if (user.joinStatus === 'REJECTED') {
         saveAuthSession({
-          accessToken,
-          refreshToken,
           user,
           authenticated: false,
           onboardingRequired: true,
@@ -91,8 +87,6 @@ export default function SsoCallbackPage() {
 
       if (!hasCouncil) {
         saveAuthSession({
-          accessToken,
-          refreshToken,
           user,
           authenticated: false,
           onboardingRequired: true,
@@ -103,8 +97,6 @@ export default function SsoCallbackPage() {
       }
 
       saveAuthSession({
-        accessToken,
-        refreshToken,
         user: { ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus },
         authenticated: true,
         onboardingRequired: false,
@@ -148,6 +140,18 @@ export default function SsoCallbackPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function hasUserIdentity(user: AuthUser) {
+  return Boolean(
+    user.userId ||
+      user.name ||
+      user.email ||
+      user.studentId ||
+      user.organizationId ||
+      user.organizationName ||
+      user.joinStatus,
   )
 }
 

@@ -16,9 +16,9 @@ import {
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 import {
-  clearAuthSession,
   fetchSsoProfile,
   getStoredUser,
+  logoutSession,
   normalizeJoinStatus,
   registerSsoUser,
   saveAuthSession,
@@ -88,8 +88,9 @@ export default function OnboardingPage() {
   }, [form.department, profile.department])
 
   const handleLogout = () => {
-    clearAuthSession()
-    navigate('/login', { replace: true })
+    void logoutSession().finally(() => {
+      navigate('/login', { replace: true })
+    })
   }
 
   const handleCreate = async (event: FormEvent) => {
@@ -161,12 +162,11 @@ export default function OnboardingPage() {
         name: response.name || nextUser.name,
         joinStatus,
       }
+      const authenticatedJoinStatus = joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus
 
-      if (response.accessToken && joinStatus !== 'PENDING' && joinStatus !== 'REJECTED') {
+      if (authenticatedJoinStatus !== 'PENDING' && authenticatedJoinStatus !== 'REJECTED') {
         saveAuthSession({
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-          user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus },
+          user: { ...responseUser, joinStatus: authenticatedJoinStatus },
           authenticated: true,
           onboardingRequired: false,
         })

@@ -1,4 +1,4 @@
-import { AUTH_KEYS, clearAuthSession, getApiBaseUrl, getStoredUser, normalizeJoinStatus, saveAuthSession } from './auth'
+import { clearAuthSession, getApiBaseUrl, getStoredUser, normalizeJoinStatus, saveAuthSession } from './auth'
 
 type ApiResponse<T> = {
   success?: boolean
@@ -23,9 +23,7 @@ export function buildApiPath(path: string, params: Record<string, string | numbe
 
 async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: boolean): Promise<T> {
   const headers = new Headers(init.headers)
-  const token = localStorage.getItem(AUTH_KEYS.accessToken)
 
-  if (token) headers.set('Authorization', `Bearer ${token}`)
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
@@ -33,6 +31,7 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers,
+    credentials: 'include',
   })
 
   if (response.status === 401 && allowRefresh) {
@@ -49,32 +48,24 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
 }
 
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem(AUTH_KEYS.refreshToken)
-  if (!refreshToken) return false
-
   try {
     const response = await sendApiRequest<{
-      accessToken?: string | null
-      refreshToken?: string | null
       userId?: number
       name?: string
       email?: string | null
       joinStatus?: string
     }>('/api/auth/refresh', {
       method: 'POST',
-      body: JSON.stringify({ refreshToken }),
     }, false)
 
-    if (!response.accessToken) return false
+    const storedUser = getStoredUser()
     saveAuthSession({
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
       user: {
-        ...(getStoredUser() ?? {}),
-        userId: response.userId,
-        name: response.name,
-        email: response.email,
-        joinStatus: normalizeJoinStatus(response.joinStatus),
+        ...(storedUser ?? {}),
+        userId: response.userId ?? storedUser?.userId,
+        name: response.name ?? storedUser?.name,
+        email: response.email ?? storedUser?.email,
+        joinStatus: normalizeJoinStatus(response.joinStatus ?? storedUser?.joinStatus),
       },
       authenticated: true,
       onboardingRequired: false,

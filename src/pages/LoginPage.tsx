@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { ExternalLink, GraduationCap, ShieldCheck } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
-import { buildSsoLoginUrl, clearAuthSession } from '../lib/auth'
+import { buildSsoLoginUrl, logoutSession } from '../lib/auth'
 
 export default function LoginPage() {
   const handleSsoLogin = () => {
-    clearAuthSession()
-    window.location.assign(buildSsoLoginUrl())
+    void logoutSession().finally(() => {
+      window.location.assign(buildSsoLoginUrl())
+    })
   }
 
   return (
