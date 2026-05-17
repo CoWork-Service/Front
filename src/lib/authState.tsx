@@ -36,6 +36,7 @@ type AuthContextValue = {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+const AUTH_REQUEST_TIMEOUT_MS = 8000
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('checking')
@@ -107,32 +108,50 @@ export function useAuth() {
 }
 
 async function fetchCurrentUser() {
-  let response = await fetchMe()
-  if (response.status === 401) {
-    const refreshed = await refreshAuthCookies()
-    if (!refreshed) return null
-    response = await fetchMe()
+  try {
+    let response = await fetchMe()
+    if (response.status === 401) {
+      const refreshed = await refreshAuthCookies()
+      if (!refreshed) return null
+      response = await fetchMe()
+    }
+
+    if (!response.ok) return null
+
+    const body = (await response.json().catch(() => ({}))) as ApiResponse<MeResponse>
+    if (body.success === false || !body.data) return null
+    return toAuthUser(body.data)
+  } catch {
+    return null
   }
-
-  if (!response.ok) return null
-
-  const body = (await response.json().catch(() => ({}))) as ApiResponse<MeResponse>
-  if (body.success === false || !body.data) return null
-  return toAuthUser(body.data)
 }
 
 function fetchMe() {
-  return fetch(`${getApiBaseUrl()}/api/auth/me`, {
+  return fetchWithTimeout(`${getApiBaseUrl()}/api/auth/me`, {
     credentials: 'include',
   })
 }
 
 async function refreshAuthCookies() {
-  const response = await fetch(`${getApiBaseUrl()}/api/auth/refresh`, {
-    method: 'POST',
-    credentials: 'include',
-  })
-  return response.ok
+  try {
+    const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
+
+  return fetch(input, {
+    ...init,
+    signal: controller.signal,
+  }).finally(() => window.clearTimeout(timeout))
 }
 
 function toAuthUser(response: MeResponse): AuthUser {
