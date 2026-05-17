@@ -38,14 +38,6 @@ const coverBorderMap: Record<string, string> = {
   red: 'border-l-red-500',
 }
 
-const coverTextMap: Record<string, string> = {
-  blue: 'text-blue-600',
-  green: 'text-emerald-600',
-  orange: 'text-amber-600',
-  purple: 'text-purple-600',
-  red: 'text-red-600',
-}
-
 function eventStatusBadge(status: EventStatus) {
   if (status === 'planning') return <StatusBadge label="기획중" variant="blue" />
   if (status === 'ongoing') return <StatusBadge label="진행중" variant="green" />
@@ -68,7 +60,6 @@ function formatBudget(amount: number) {
 function EventCard({ event }: { event: CoworkEvent }) {
   const color = event.coverColor ?? 'blue'
   const borderClass = coverBorderMap[color] ?? 'border-l-blue-500'
-  const textClass = coverTextMap[color] ?? 'text-blue-600'
 
   return (
     <Link

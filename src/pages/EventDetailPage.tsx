@@ -1148,7 +1148,6 @@ export default function EventDetailPage() {
 
   const color = event.coverColor ?? 'blue'
   const borderClass = coverBorderMap[color] ?? 'border-blue-500'
-  const bgClass = coverBgMap[color] ?? 'bg-blue-600'
 
   const eventPhotos = event.photos ?? []
 

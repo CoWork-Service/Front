@@ -126,7 +126,6 @@ const coverBorderMap: Record<string, string> = {
   red: 'border-l-red-500',
 }
 
-
 export default function HomePage() {
   const { currentCohortId } = useCohortStore()
   const { memos, addMemo, updateMemo, deleteMemo, togglePriority, toggleStatus } = useMemoStore()
@@ -271,7 +270,7 @@ export default function HomePage() {
                   to={`/events/${e.id}`}
                   className={`bg-white rounded-xl border border-slate-200 border-l-4 ${borderClass} p-4 hover:shadow-sm transition-shadow`}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="mb-2">
                     <p className="text-sm font-semibold text-slate-800 leading-snug">{e.name}</p>
                   </div>
                   <div className="space-y-1 text-xs text-slate-500">
