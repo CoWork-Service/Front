@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AUTH_SESSION_EXPIRED_EVENT,
   clearLegacyAuthStorage,
@@ -37,8 +37,10 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('checking')
   const [user, setUser] = useState<AuthUser | null>(null)
+  const sessionVersionRef = useRef(0)
 
   const setAuthenticatedUser = useCallback((nextUser: AuthUser) => {
+    sessionVersionRef.current += 1
     clearLegacyAuthStorage()
     setUser({
       ...nextUser,
@@ -48,14 +50,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const clearAuthUser = useCallback(() => {
+    sessionVersionRef.current += 1
     clearLegacyAuthStorage()
     setUser(null)
     setStatus('anonymous')
   }, [])
 
   const refreshSession = useCallback(async () => {
+    const requestVersion = sessionVersionRef.current
     clearLegacyAuthStorage()
     const nextUser = await fetchCurrentUser()
+    if (requestVersion !== sessionVersionRef.current) {
+      return nextUser
+    }
+
     if (nextUser) {
       setAuthenticatedUser(nextUser)
       return nextUser

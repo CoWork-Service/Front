@@ -36,6 +36,9 @@ export default function SsoCallbackPage() {
       const queryUser = userFromSearchParams(searchParams)
 
       if (!accessToken && !hasUserIdentity(queryUser)) {
+        if (status === 'checking') {
+          return
+        }
         if (status === 'authenticated') {
           navigate('/home', { replace: true })
           return
