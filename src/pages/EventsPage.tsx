@@ -448,7 +448,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div>
       <PageHeader
         title="행사 관리"
         description="학생회 행사를 등록하고 파일·예산·설문 등을 통합 관리합니다."
