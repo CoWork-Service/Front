@@ -1,4 +1,4 @@
-import { AUTH_KEYS, clearAuthSession, getApiBaseUrl, getStoredUser, normalizeJoinStatus, saveAuthSession } from './auth'
+import { AUTH_CONSENT_REQUIRED_EVENT, expireAuthSession, getApiBaseUrl } from './auth'
 
 type ApiResponse<T> = {
   success?: boolean
@@ -23,9 +23,7 @@ export function buildApiPath(path: string, params: Record<string, string | numbe
 
 async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: boolean): Promise<T> {
   const headers = new Headers(init.headers)
-  const token = localStorage.getItem(AUTH_KEYS.accessToken)
 
-  if (token) headers.set('Authorization', `Bearer ${token}`)
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
@@ -33,6 +31,7 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers,
+    credentials: 'include',
   })
 
   if (response.status === 401 && allowRefresh) {
@@ -42,6 +41,9 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
 
   const body = (await response.json().catch(() => ({}))) as ApiResponse<T>
   if (!response.ok || body.success === false) {
+    if (body.code === 'POLICY_CONSENT_REQUIRED') {
+      window.dispatchEvent(new Event(AUTH_CONSENT_REQUIRED_EVENT))
+    }
     throw new Error(body.message || '요청 처리에 실패했습니다.')
   }
 
@@ -49,39 +51,14 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
 }
 
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem(AUTH_KEYS.refreshToken)
-  if (!refreshToken) return false
-
   try {
-    const response = await sendApiRequest<{
-      accessToken?: string | null
-      refreshToken?: string | null
-      userId?: number
-      name?: string
-      email?: string | null
-      joinStatus?: string
-    }>('/api/auth/refresh', {
+    await sendApiRequest('/api/auth/refresh', {
       method: 'POST',
-      body: JSON.stringify({ refreshToken }),
     }, false)
 
-    if (!response.accessToken) return false
-    saveAuthSession({
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      user: {
-        ...(getStoredUser() ?? {}),
-        userId: response.userId,
-        name: response.name,
-        email: response.email,
-        joinStatus: normalizeJoinStatus(response.joinStatus),
-      },
-      authenticated: true,
-      onboardingRequired: false,
-    })
     return true
   } catch {
-    clearAuthSession()
+    expireAuthSession()
     return false
   }
 }

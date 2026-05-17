@@ -126,14 +126,6 @@ const coverBorderMap: Record<string, string> = {
   red: 'border-l-red-500',
 }
 
-const coverBgMap: Record<string, string> = {
-  blue: 'bg-blue-100 text-blue-700',
-  green: 'bg-emerald-100 text-emerald-700',
-  orange: 'bg-amber-100 text-amber-700',
-  purple: 'bg-purple-100 text-purple-700',
-  red: 'bg-red-100 text-red-700',
-}
-
 export default function HomePage() {
   const { currentCohortId } = useCohortStore()
   const { memos, addMemo, updateMemo, deleteMemo, togglePriority, toggleStatus } = useMemoStore()
@@ -272,16 +264,14 @@ export default function HomePage() {
             {upcomingEvents.map((e) => {
               const color = e.coverColor ?? 'blue'
               const borderClass = coverBorderMap[color] ?? 'border-l-blue-500'
-              const tagClass = coverBgMap[color] ?? 'bg-blue-100 text-blue-700'
               return (
                 <Link
                   key={e.id}
                   to={`/events/${e.id}`}
                   className={`bg-white rounded-xl border border-slate-200 border-l-4 ${borderClass} p-4 hover:shadow-sm transition-shadow`}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="mb-2">
                     <p className="text-sm font-semibold text-slate-800 leading-snug">{e.name}</p>
-                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${tagClass}`}>{e.category}</span>
                   </div>
                   <div className="space-y-1 text-xs text-slate-500">
                     <div className="flex items-center gap-1.5">

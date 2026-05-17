@@ -1,14 +1,14 @@
 import React from 'react'
 import { Bell, User } from 'lucide-react'
 import { CohortSelector } from './CohortSelector'
-import { getStoredUser } from '../../lib/auth'
+import { useAuth } from '../../lib/authState'
 
 interface TopHeaderProps {
   pageTitle?: string
 }
 
 export function TopHeader({ pageTitle }: TopHeaderProps) {
-  const user = getStoredUser()
+  const { user } = useAuth()
   const userName = user?.name || '사용자'
 
   return (

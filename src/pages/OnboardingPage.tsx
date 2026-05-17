@@ -16,14 +16,13 @@ import {
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 import {
-  clearAuthSession,
   fetchSsoProfile,
-  getStoredUser,
+  logoutSession,
   normalizeJoinStatus,
   registerSsoUser,
-  saveAuthSession,
   type AuthUser,
 } from '../lib/auth'
+import { useAuth } from '../lib/authState'
 import { REQUIRED_DEPARTMENT } from '../lib/departments'
 
 type Mode = 'select' | 'create' | 'departments' | 'join' | 'pending'
@@ -33,16 +32,11 @@ const DEFAULT_DEPARTMENTS = [REQUIRED_DEPARTMENT, '기획국', '총무부', '홍
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const tempToken = useMemo(
-    () => searchParams.get('tempToken') || localStorage.getItem('cowork_sso_temp_token') || '',
-    [searchParams],
-  )
-  const storedUser = tempToken ? null : getStoredUser()
+  const { setAuthenticatedUser } = useAuth()
+  const tempToken = useMemo(() => searchParams.get('tempToken') || '', [searchParams])
 
-  const [mode, setMode] = useState<Mode>(
-    localStorage.getItem('cowork_onboarding_status') === 'pending' ? 'pending' : 'select',
-  )
-  const [profile, setProfile] = useState<AuthUser>(storedUser || {})
+  const [mode, setMode] = useState<Mode>('select')
+  const [profile, setProfile] = useState<AuthUser>({})
   const [isLoading, setIsLoading] = useState(Boolean(tempToken))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -50,7 +44,7 @@ export default function OnboardingPage() {
   const [form, setForm] = useState({
     councilName: '',
     cohortLabel: '',
-    department: storedUser?.department || '',
+    department: '',
     inviteCode: '',
     presidentConfirmed: false,
   })
@@ -88,8 +82,9 @@ export default function OnboardingPage() {
   }, [form.department, profile.department])
 
   const handleLogout = () => {
-    clearAuthSession()
-    navigate('/login', { replace: true })
+    void logoutSession().finally(() => {
+      navigate('/login', { replace: true })
+    })
   }
 
   const handleCreate = async (event: FormEvent) => {
@@ -161,28 +156,23 @@ export default function OnboardingPage() {
         name: response.name || nextUser.name,
         joinStatus,
       }
+      const authenticatedJoinStatus = joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus
 
-      if (response.accessToken && joinStatus !== 'PENDING' && joinStatus !== 'REJECTED') {
-        saveAuthSession({
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-          user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus },
-          authenticated: true,
-          onboardingRequired: false,
-        })
-        navigate('/home', { replace: true })
+      if (authenticatedJoinStatus !== 'PENDING' && authenticatedJoinStatus !== 'REJECTED') {
+        const authenticatedUser = {
+          ...responseUser,
+          joinStatus: authenticatedJoinStatus,
+          consentRequired: Boolean(response.consentRequired),
+          termsVersion: response.termsVersion,
+          privacyVersion: response.privacyVersion,
+        }
+        setAuthenticatedUser(authenticatedUser)
+        navigate(authenticatedUser.consentRequired ? '/consent' : '/home', { replace: true })
         return
       }
 
-      saveAuthSession({
-        tempToken,
-        user: { ...responseUser, joinStatus: joinStatus === 'UNKNOWN' ? 'PENDING' : joinStatus },
-        authenticated: false,
-        onboardingRequired: true,
-        onboardingStatus: joinStatus === 'REJECTED' ? 'rejected' : 'pending',
-      })
       if (joinStatus === 'REJECTED') {
-        navigate('/rejected', { replace: true })
+        navigate(statusPath('/rejected', responseUser), { replace: true })
         return
       }
       setMode('pending')
@@ -460,6 +450,14 @@ export default function OnboardingPage() {
       </div>
     </OnboardingShell>
   )
+}
+
+function statusPath(path: '/pending' | '/rejected', user: AuthUser) {
+  const params = new URLSearchParams()
+  if (user.name) params.set('name', user.name)
+  if (user.studentId) params.set('studentId', user.studentId)
+  const query = params.toString()
+  return query ? `${path}?${query}` : path
 }
 
 function OnboardingShell({ children }: { children: ReactNode }) {

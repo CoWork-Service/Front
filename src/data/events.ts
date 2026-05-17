@@ -5,7 +5,7 @@ export const events: CoworkEvent[] = [
     id: 'evt-1',
     cohortId: '1',
     name: '2026 신입생 OT',
-    category: 'OT',
+
     status: 'done',
     description:
       '2026 기수 신입생 오리엔테이션. 캠퍼스 투어, 선후배 만남, 레크리에이션 진행. 신입생 55명 참가하여 성황리에 마무리.',
@@ -58,7 +58,7 @@ export const events: CoworkEvent[] = [
     id: 'evt-2',
     cohortId: '1',
     name: '4월 정기총회',
-    category: '정기총회',
+
     status: 'planning',
     description:
       '2026 기수 1차 정기총회. 안건: ①학생회비 납부 현황 ②하반기 사업 계획 ③예산 심의. 박지훈 사회, 이서연 결산 발표.',
@@ -77,7 +77,7 @@ export const events: CoworkEvent[] = [
     id: 'evt-3',
     cohortId: '1',
     name: '상반기 운영진 MT',
-    category: 'MT',
+
     status: 'planning',
     description:
       '상반기 마무리 겸 팀빌딩 MT. 5월 초 1박 2일 예정. 장소는 가평 방면으로 조율 중.',
@@ -96,7 +96,7 @@ export const events: CoworkEvent[] = [
     id: 'evt-4',
     cohortId: '1',
     name: '봄 체육대회',
-    category: '체육대회',
+
     status: 'planning',
     description:
       '과 대항 체육대회. 종목: 축구, 농구, 줄다리기. 학교 운동장 예약 완료. 참가팀 모집 중.',
@@ -115,7 +115,7 @@ export const events: CoworkEvent[] = [
     id: 'evt-5',
     cohortId: '1',
     name: '홍보 부스 운영',
-    category: '기타',
+
     status: 'cancelled',
     description:
       '외부 협력사 일정 변경으로 인해 행사 취소됨. 기집행 예산은 환불 처리 완료.',

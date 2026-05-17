@@ -11,6 +11,9 @@ export type AuthUser = {
   organizationDepartments?: string[]
   role?: string
   joinStatus?: JoinStatus
+  consentRequired?: boolean
+  termsVersion?: string
+  privacyVersion?: string
 }
 
 export type SsoProfile = {
@@ -27,12 +30,13 @@ type ApiResponse<T> = {
 }
 
 type TokenResponse = {
-  accessToken?: string | null
-  refreshToken?: string | null
   userId?: number
   name?: string
   email?: string | null
   joinStatus?: string
+  consentRequired?: boolean
+  termsVersion?: string
+  privacyVersion?: string
 }
 
 type JwtPayload = Record<string, string | number | null | undefined>
@@ -55,15 +59,18 @@ function tokenNullableString(value: string | number | null | undefined) {
   return tokenString(value)
 }
 
-export const AUTH_KEYS = {
-  auth: 'cowork_auth',
-  accessToken: 'cowork_access_token',
-  refreshToken: 'cowork_refresh_token',
-  tempToken: 'cowork_sso_temp_token',
-  user: 'cowork_user',
-  onboardingRequired: 'cowork_onboarding_required',
-  onboardingStatus: 'cowork_onboarding_status',
-} as const
+const LEGACY_AUTH_STORAGE_KEYS = [
+  'cowork_auth',
+  'cowork_access_token',
+  'cowork_refresh_token',
+  'cowork_sso_temp_token',
+  'cowork_user',
+  'cowork_onboarding_required',
+  'cowork_onboarding_status',
+] as const
+
+export const AUTH_SESSION_EXPIRED_EVENT = 'cowork:auth-session-expired'
+export const AUTH_CONSENT_REQUIRED_EVENT = 'cowork:policy-consent-required'
 
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
@@ -83,72 +90,25 @@ export function normalizeJoinStatus(value?: string | null): JoinStatus {
   return 'UNKNOWN'
 }
 
-export function getStoredUser(): AuthUser | null {
-  const raw = localStorage.getItem(AUTH_KEYS.user)
-  if (!raw) return null
+export function clearLegacyAuthStorage() {
+  LEGACY_AUTH_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key))
+}
 
+export function expireAuthSession() {
+  clearLegacyAuthStorage()
+  window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT))
+}
+
+export async function logoutSession() {
   try {
-    return JSON.parse(raw) as AuthUser
+    await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    })
   } catch {
-    return null
+    // Local state must be cleared even if the network request is interrupted.
   }
-}
-
-export function hasAuthenticatedSession() {
-  return localStorage.getItem(AUTH_KEYS.auth) === 'true' && !needsOnboarding()
-}
-
-export function hasSsoIdentity() {
-  return Boolean(
-    localStorage.getItem(AUTH_KEYS.accessToken) ||
-      localStorage.getItem(AUTH_KEYS.tempToken) ||
-      getStoredUser(),
-  )
-}
-
-export function needsOnboarding() {
-  return localStorage.getItem(AUTH_KEYS.onboardingRequired) === 'true'
-}
-
-export function saveAuthSession({
-  accessToken,
-  refreshToken,
-  tempToken,
-  user,
-  authenticated,
-  onboardingRequired = false,
-  onboardingStatus,
-}: {
-  accessToken?: string | null
-  refreshToken?: string | null
-  tempToken?: string | null
-  user?: AuthUser | null
-  authenticated?: boolean
-  onboardingRequired?: boolean
-  onboardingStatus?: 'select' | 'pending' | 'rejected'
-}) {
-  if (accessToken) localStorage.setItem(AUTH_KEYS.accessToken, accessToken)
-  if (refreshToken) localStorage.setItem(AUTH_KEYS.refreshToken, refreshToken)
-  if (tempToken) localStorage.setItem(AUTH_KEYS.tempToken, tempToken)
-  if (user) localStorage.setItem(AUTH_KEYS.user, JSON.stringify(user))
-
-  const isAuthenticated =
-    authenticated ??
-    Boolean(accessToken && !onboardingRequired && user?.joinStatus !== 'PENDING' && user?.joinStatus !== 'REJECTED')
-
-  localStorage.setItem(AUTH_KEYS.auth, isAuthenticated ? 'true' : 'false')
-  localStorage.setItem(AUTH_KEYS.onboardingRequired, onboardingRequired ? 'true' : 'false')
-
-  if (onboardingStatus) {
-    localStorage.setItem(AUTH_KEYS.onboardingStatus, onboardingStatus)
-  } else if (!onboardingRequired) {
-    localStorage.removeItem(AUTH_KEYS.onboardingStatus)
-    localStorage.removeItem(AUTH_KEYS.tempToken)
-  }
-}
-
-export function clearAuthSession() {
-  Object.values(AUTH_KEYS).forEach((key) => localStorage.removeItem(key))
+  expireAuthSession()
 }
 
 export function userFromToken(accessToken: string): AuthUser {
@@ -165,6 +125,9 @@ export function userFromToken(accessToken: string): AuthUser {
     organizationName: tokenString(pickTokenValue(payload, ['organizationName', 'orgName'])),
     role: tokenString(pickTokenValue(payload, ['role', 'authority'])),
     joinStatus: normalizeJoinStatus(tokenString(payload.joinStatus)),
+    consentRequired: parseBooleanParam(tokenString(payload.consentRequired) || null),
+    termsVersion: tokenString(payload.termsVersion),
+    privacyVersion: tokenString(payload.privacyVersion),
   }
 }
 
@@ -174,7 +137,9 @@ export function parseBooleanParam(value: string | null) {
 }
 
 export async function fetchSsoProfile(tempToken: string): Promise<SsoProfile> {
-  const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/profile?tempToken=${encodeURIComponent(tempToken)}`)
+  const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/profile?tempToken=${encodeURIComponent(tempToken)}`, {
+    credentials: 'include',
+  })
   const body = (await response.json()) as ApiResponse<SsoProfile>
 
   if (!response.ok || body.success === false || !body.data) {
@@ -195,6 +160,7 @@ export async function registerSsoUser(payload: {
 }): Promise<TokenResponse> {
   const response = await fetch(`${getApiBaseUrl()}/api/auth/sso/register`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })

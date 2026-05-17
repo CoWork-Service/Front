@@ -1,12 +1,20 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { ExternalLink, GraduationCap, ShieldCheck } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
-import { buildSsoLoginUrl, clearAuthSession } from '../lib/auth'
+import { buildSsoLoginUrl, logoutSession } from '../lib/auth'
+import { useAuth } from '../lib/authState'
 
 export default function LoginPage() {
+  const { status, user } = useAuth()
+
   const handleSsoLogin = () => {
-    clearAuthSession()
-    window.location.assign(buildSsoLoginUrl())
+    void logoutSession().finally(() => {
+      window.location.assign(buildSsoLoginUrl())
+    })
+  }
+
+  if (status === 'authenticated') {
+    return <Navigate to={user?.consentRequired ? '/consent' : '/home'} replace />
   }
 
   return (

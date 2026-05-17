@@ -52,7 +52,7 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 flex flex-col z-30">
       {/* 로고 */}
-      <div className="px-5 py-5 border-b border-slate-100">
+      <div className="h-16 px-5 border-b border-slate-100 flex items-center">
         <div className="flex items-center gap-2.5">
           <img src={logoUrl} alt="CoWork 로고" className="w-9 h-9 rounded-lg object-contain shrink-0" />
           <div>

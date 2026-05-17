@@ -38,7 +38,6 @@ import { useToast } from '../components/common/Toast'
 import type {
   CoworkEvent,
   Department,
-  EventCategory,
   EventStatus,
   EventPhoto,
   EventPhotoTag,
@@ -875,12 +874,10 @@ const coverBgMap: Record<string, string> = {
   red: 'bg-red-600',
 }
 
-const EVENT_CATEGORIES: EventCategory[] = ['OT', '정기총회', 'MT', '체육대회', '축제', '간담회', '기타']
 const EVENT_COVER_COLORS = ['blue', 'green', 'orange', 'purple', 'red']
 
 type EventEditFormState = {
   name: string
-  category: EventCategory
   status: EventStatus
   startDate: string
   endDate: string
@@ -895,7 +892,6 @@ type EventEditFormState = {
 function toEventEditFormState(event: CoworkEvent): EventEditFormState {
   return {
     name: event.name,
-    category: event.category,
     status: event.status,
     startDate: event.startDate,
     endDate: event.endDate,
@@ -952,7 +948,6 @@ function EventEditModal({
     try {
       await updateEvent(event.id, {
         name: form.name.trim(),
-        category: form.category,
         status: form.status,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -994,22 +989,14 @@ function EventEditModal({
           <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="예: 4월 정기총회" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>카테고리</label>
-            <select className={inputCls} value={form.category} onChange={(e) => set('category', e.target.value as EventCategory)}>
-              {EVENT_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>상태</label>
-            <select className={inputCls} value={form.status} onChange={(e) => set('status', e.target.value as EventStatus)}>
-              <option value="planning">기획중</option>
-              <option value="ongoing">진행중</option>
-              <option value="done">완료</option>
-              <option value="cancelled">취소</option>
-            </select>
-          </div>
+        <div>
+          <label className={labelCls}>상태</label>
+          <select className={inputCls} value={form.status} onChange={(e) => set('status', e.target.value as EventStatus)}>
+            <option value="planning">기획중</option>
+            <option value="ongoing">진행중</option>
+            <option value="done">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -1161,7 +1148,6 @@ export default function EventDetailPage() {
 
   const color = event.coverColor ?? 'blue'
   const borderClass = coverBorderMap[color] ?? 'border-blue-500'
-  const bgClass = coverBgMap[color] ?? 'bg-blue-600'
 
   const eventPhotos = event.photos ?? []
 
@@ -1190,9 +1176,6 @@ export default function EventDetailPage() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`inline-flex items-center text-xs font-semibold text-white px-2.5 py-1 rounded-md ${bgClass}`}>
-                {event.category}
-              </span>
               <EventStatusBadge status={event.status} />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 mb-3">{event.name}</h1>

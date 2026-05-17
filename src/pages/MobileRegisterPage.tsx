@@ -6,17 +6,20 @@ import type { BudgetCategory, PaymentMethod } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
-
-// OCR 시뮬레이션 샘플
-const OCR_SAMPLES = [
-  { vendor: '이마트', amount: 45600, category: '소모품' as BudgetCategory, description: '행사 준비물 구매' },
-  { vendor: '맥도날드', amount: 32000, category: '식대' as BudgetCategory, description: '팀원 식사' },
-  { vendor: '카페 라운지', amount: 18500, category: '식대' as BudgetCategory, description: '회의 음료' },
-  { vendor: 'CGV 인쇄소', amount: 12000, category: '인쇄비' as BudgetCategory, description: '홍보물 인쇄' },
-  { vendor: '다이소', amount: 8900, category: '소모품' as BudgetCategory, description: '행사 용품' },
-]
+const formRowCls = 'grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-3 px-4 py-3 min-h-14'
+const amountRowCls = 'grid grid-cols-[5rem_minmax(0,1fr)_1.25rem] items-center gap-3 px-4 py-3 min-h-14'
+const formLabelCls = 'self-center text-xs font-medium text-slate-500 whitespace-nowrap'
+const formControlCls = 'block w-full min-w-0 h-9 bg-transparent py-0 text-left text-sm leading-5 text-slate-800 focus:outline-none placeholder:text-slate-300'
+const formDateCls = `${formControlCls} mobile-date-input appearance-none`
+const formSelectCls = `${formControlCls} pr-1`
 
 type Step = 'photo' | 'ocr' | 'form' | 'done'
+
+type MobileEventOption = {
+  id: number
+  name: string
+  startDate?: string | null
+}
 
 type MobileSessionStatus = {
   sessionToken: string
@@ -24,6 +27,19 @@ type MobileSessionStatus = {
   expired: boolean
   expenseId?: number | null
   expiresAt: string
+  events?: MobileEventOption[]
+}
+
+type ReceiptOcrResponse = {
+  date?: string | null
+  vendor?: string | null
+  amount?: number | null
+  paymentMethod?: string | null
+  category?: string | null
+  description?: string | null
+  cardCompany?: string | null
+  cardNumber?: string | null
+  approvalNumber?: string | null
 }
 
 function formatRemaining(ms: number) {
@@ -31,6 +47,14 @@ function formatRemaining(ms: number) {
   const m = Math.floor(s / 60)
   const sec = s % 60
   return `${m}:${String(sec).padStart(2, '0')}`
+}
+
+function asBudgetCategory(value?: string | null): BudgetCategory | '' {
+  return CATEGORIES.includes(value as BudgetCategory) ? value as BudgetCategory : ''
+}
+
+function asPaymentMethod(value?: string | null): PaymentMethod | '' {
+  return PAYMENT_METHODS.includes(value as PaymentMethod) ? value as PaymentMethod : ''
 }
 
 export default function MobileRegisterPage() {
@@ -58,6 +82,7 @@ export default function MobileRegisterPage() {
     amount: '',
     paymentMethod: '' as PaymentMethod | '',
     description: '',
+    eventId: '',
     note: '',
   })
 
@@ -100,28 +125,47 @@ export default function MobileRegisterPage() {
     return () => clearInterval(id)
   }, [session, isExpired])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !token) return
     const url = URL.createObjectURL(file)
     setSubmitError('')
     setImageFile(file)
     setImageUrl(url)
     setUploaded(false)
     setStep('ocr')
-    setTimeout(() => {
-      const sample = OCR_SAMPLES[Math.floor(Math.random() * OCR_SAMPLES.length)]
+
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const ocr = await apiRequest<ReceiptOcrResponse>(`/api/mobile/sessions/${token}/ocr`, {
+        method: 'POST',
+        body,
+      })
       setForm({
-        date: today,
-        vendor: sample.vendor,
-        category: sample.category,
-        amount: String(sample.amount),
-        paymentMethod: '개인카드',
-        description: sample.description,
+        date: ocr.date || today,
+        vendor: ocr.vendor || '',
+        category: asBudgetCategory(ocr.category),
+        amount: ocr.amount ? String(ocr.amount) : '',
+        paymentMethod: asPaymentMethod(ocr.paymentMethod),
+        description: ocr.description || '',
+        eventId: '',
         note: '',
       })
+    } catch (error) {
+      setSubmitError(error instanceof Error ? `${error.message} 직접 입력해 주세요.` : 'OCR 분석에 실패했습니다. 직접 입력해 주세요.')
+      setForm((prev) => ({
+        ...prev,
+        date: today,
+        vendor: '',
+        category: '',
+        amount: '',
+        paymentMethod: '',
+        description: '',
+      }))
+    } finally {
       setStep('form')
-    }, 2000)
+    }
   }
 
   const handleSubmit = async () => {
@@ -156,6 +200,7 @@ export default function MobileRegisterPage() {
           amount,
           paymentMethod: form.paymentMethod || '개인카드',
           note: form.note || undefined,
+          eventId: form.eventId ? Number(form.eventId) : undefined,
         }),
       })
       setStep('done')
@@ -209,12 +254,12 @@ export default function MobileRegisterPage() {
 
   // ── 공통 헤더 ─────────────────────────────────────────────────────────────────
   const Header = () => (
-    <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between shrink-0">
-      <div className="flex items-center gap-2">
-        <Receipt size={20} className="text-blue-600" />
-        <h1 className="text-base font-bold text-slate-900">지출 모바일 등록</h1>
+    <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between gap-3 shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <Receipt size={20} className="text-blue-600 shrink-0" />
+        <h1 className="text-base font-bold text-slate-900 truncate">지출 모바일 등록</h1>
       </div>
-      <span className="text-xs font-mono bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
+      <span className="text-xs font-mono bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full shrink-0">
         {formatRemaining(remaining)} 남음
       </span>
     </div>
@@ -306,11 +351,11 @@ export default function MobileRegisterPage() {
 
   // ── STEP 2: OCR 결과 수정 폼 ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-[100dvh] bg-slate-50 flex flex-col">
       <Header />
       <StepIndicator current={2} />
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-4">
         {/* 영수증 미리보기 */}
         {imageUrl && (
           <div className="flex justify-center">
@@ -329,83 +374,99 @@ export default function MobileRegisterPage() {
 
         {/* 입력 폼 */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">날짜</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>날짜</span>
             <input
               type="date"
               value={form.date}
               onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none"
+              className={formDateCls}
             />
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">거래처</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>거래처</span>
             <input
               type="text"
               value={form.vendor}
               onChange={(e) => setForm((f) => ({ ...f, vendor: e.target.value }))}
               placeholder="거래처명"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">금액</span>
+          <label className={amountRowCls}>
+            <span className={formLabelCls}>금액</span>
             <input
               type="number"
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               placeholder="0"
               inputMode="numeric"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
-            <span className="text-xs text-slate-400 shrink-0">원</span>
+            <span className="text-xs text-slate-400 text-right whitespace-nowrap">원</span>
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">카테고리</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>카테고리</span>
             <select
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as BudgetCategory }))}
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none"
+              className={formSelectCls}
             >
               <option value="">선택</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">결제수단</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>결제수단</span>
             <select
               value={form.paymentMethod}
               onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none"
+              className={formSelectCls}
             >
               <option value="">선택</option>
               {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">내용</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>내용</span>
             <input
               type="text"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="지출 내용"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
           </label>
 
-          <label className="flex items-center gap-3 px-4 py-3.5">
-            <span className="text-xs font-medium text-slate-500 w-16 shrink-0">메모</span>
+          <label className={formRowCls}>
+            <span className={formLabelCls}>연결 행사</span>
+            <select
+              value={form.eventId}
+              onChange={(e) => setForm((f) => ({ ...f, eventId: e.target.value }))}
+              className={formSelectCls}
+            >
+              <option value="">행사 미연결</option>
+              {(session.events ?? []).map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name}{event.startDate ? ` (${event.startDate})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={formRowCls}>
+            <span className={formLabelCls}>메모</span>
             <input
               type="text"
               value={form.note}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               placeholder="선택 입력"
-              className="flex-1 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-300"
+              className={formControlCls}
             />
           </label>
         </div>
@@ -426,7 +487,7 @@ export default function MobileRegisterPage() {
       </div>
 
       {/* 제출 버튼 */}
-      <div className="px-5 pt-3 pb-10 bg-slate-50 border-t border-slate-100 shrink-0">
+      <div className="px-5 pt-3 pb-[calc(2.5rem+env(safe-area-inset-bottom))] bg-slate-50 border-t border-slate-100 shrink-0">
         <button
           onClick={handleSubmit}
           disabled={submitting || !imageFile || !form.vendor || !form.amount || !form.date}

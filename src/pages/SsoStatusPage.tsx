@@ -1,16 +1,21 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Clock3, LogOut, ShieldOff } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
-import { clearAuthSession, getStoredUser } from '../lib/auth'
+import { logoutSession } from '../lib/auth'
 
 export default function SsoStatusPage({ status }: { status: 'pending' | 'rejected' }) {
   const navigate = useNavigate()
-  const user = getStoredUser()
+  const [searchParams] = useSearchParams()
+  const user = {
+    name: searchParams.get('name') || undefined,
+    studentId: searchParams.get('studentId') || undefined,
+  }
   const isPending = status === 'pending'
 
   const handleLogout = () => {
-    clearAuthSession()
-    navigate('/login', { replace: true })
+    void logoutSession().finally(() => {
+      navigate('/login', { replace: true })
+    })
   }
 
   return (
