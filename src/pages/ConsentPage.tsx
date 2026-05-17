@@ -18,42 +18,21 @@ type ConsentStatus = {
 
 export default function ConsentPage() {
   const navigate = useNavigate()
-  const { user, refreshSession } = useAuth()
-  const [status, setStatus] = useState<ConsentStatus | null>(null)
+  const { user, refreshSession, setAuthenticatedUser } = useAuth()
   const [termsAgreed, setTermsAgreed] = useState(false)
   const [privacyAgreed, setPrivacyAgreed] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  const termsVersion = status?.termsVersion || user?.termsVersion || '2026-05-17'
-  const privacyVersion = status?.privacyVersion || user?.privacyVersion || '2026-05-17'
+  const termsVersion = user?.termsVersion || '2026-05-17'
+  const privacyVersion = user?.privacyVersion || '2026-05-17'
   const canSubmit = termsAgreed && privacyAgreed && !isSubmitting
 
   useEffect(() => {
-    let cancelled = false
-
-    apiRequest<ConsentStatus>('/api/auth/consent')
-      .then((nextStatus) => {
-        if (cancelled) return
-        setStatus(nextStatus)
-        if (!nextStatus.consentRequired) {
-          navigate('/home', { replace: true })
-        }
-      })
-      .catch((requestError) => {
-        if (!cancelled) {
-          setError(requestError instanceof Error ? requestError.message : '동의 상태를 확인하지 못했습니다.')
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => {
-      cancelled = true
+    if (user && !user.consentRequired) {
+      navigate('/home', { replace: true })
     }
-  }, [navigate])
+  }, [navigate, user])
 
   const requiredItems = useMemo(
     () => [
@@ -82,7 +61,11 @@ export default function ConsentPage() {
           privacyVersion,
         }),
       })
-      await refreshSession()
+      if (user) {
+        setAuthenticatedUser({ ...user, consentRequired: false, termsVersion, privacyVersion })
+      } else {
+        await refreshSession()
+      }
       navigate('/home', { replace: true })
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '동의 저장에 실패했습니다.')
@@ -93,17 +76,6 @@ export default function ConsentPage() {
 
   const handleLogout = () => {
     void logoutSession().finally(() => navigate('/login', { replace: true }))
-  }
-
-  if (isLoading) {
-    return (
-      <ConsentShell>
-        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
-          <Loader2 size={26} className="animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-sm text-slate-500">필수 동의 상태를 확인하고 있습니다.</p>
-        </div>
-      </ConsentShell>
-    )
   }
 
   return (
