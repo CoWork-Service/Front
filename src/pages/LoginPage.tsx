@@ -9,7 +9,7 @@ export default function LoginPage() {
 
   const handleSsoLogin = () => {
     void logoutSession().finally(() => {
-      window.location.assign(buildSsoLoginUrl())
+      window.location.replace(buildSsoLoginUrl())
     })
   }
 

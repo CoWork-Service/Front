@@ -71,8 +71,13 @@ const LEGACY_AUTH_STORAGE_KEYS = [
 
 export const AUTH_SESSION_EXPIRED_EVENT = 'cowork:auth-session-expired'
 export const AUTH_CONSENT_REQUIRED_EVENT = 'cowork:policy-consent-required'
+const LOGOUT_REQUEST_TIMEOUT_MS = 3000
 
 export function getApiBaseUrl() {
+  if (typeof window !== 'undefined' && window.location.origin === 'https://cowork.kro.kr') {
+    return window.location.origin
+  }
+
   return (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
 }
 
@@ -100,13 +105,19 @@ export function expireAuthSession() {
 }
 
 export async function logoutSession() {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), LOGOUT_REQUEST_TIMEOUT_MS)
+
   try {
     await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include',
+      signal: controller.signal,
     })
   } catch {
     // Local state must be cleared even if the network request is interrupted.
+  } finally {
+    window.clearTimeout(timeout)
   }
   expireAuthSession()
 }

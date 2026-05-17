@@ -102,10 +102,11 @@ export default function ConsentPage() {
           </div>
           <button
             onClick={handleLogout}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 shrink-0"
-            title="로그아웃"
+            className="btn-secondary shrink-0 py-1.5 px-3 text-xs"
+            title="다른 계정으로 로그인"
           >
-            <LogOut size={18} />
+            <LogOut size={14} />
+            다른 계정
           </button>
         </div>
 

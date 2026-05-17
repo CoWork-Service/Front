@@ -10,11 +10,24 @@ import {
 } from '../lib/auth'
 import { useAuth } from '../lib/authState'
 
+const CALLBACK_SESSION_WAIT_MS = 3500
+
 export default function SsoCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { status, user: currentUser, setAuthenticatedUser } = useAuth()
   const [error, setError] = useState('')
+  const [sessionWaitExpired, setSessionWaitExpired] = useState(false)
+
+  useEffect(() => {
+    if (hasCallbackPayload(searchParams) || status !== 'checking') {
+      setSessionWaitExpired(false)
+      return
+    }
+
+    const timeout = window.setTimeout(() => setSessionWaitExpired(true), CALLBACK_SESSION_WAIT_MS)
+    return () => window.clearTimeout(timeout)
+  }, [searchParams, status])
 
   useEffect(() => {
     const processCallback = () => {
@@ -36,14 +49,14 @@ export default function SsoCallbackPage() {
       const queryUser = userFromSearchParams(searchParams)
 
       if (!accessToken && !hasUserIdentity(queryUser)) {
-        if (status === 'checking') {
+        if (status === 'checking' && !sessionWaitExpired) {
           return
         }
         if (status === 'authenticated') {
           navigate(currentUser?.consentRequired ? '/consent' : '/home', { replace: true })
           return
         }
-        setError('SSO 로그인 결과를 확인할 수 없습니다.')
+        setError('SSO 로그인 세션을 확인할 수 없습니다. 다시 로그인해 주세요.')
         return
       }
 
@@ -81,7 +94,7 @@ export default function SsoCallbackPage() {
     }
 
     processCallback()
-  }, [currentUser, navigate, searchParams, setAuthenticatedUser, status])
+  }, [currentUser, navigate, searchParams, sessionWaitExpired, setAuthenticatedUser, status])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -136,6 +149,17 @@ function hasUserIdentity(user: AuthUser) {
       user.organizationId ||
       user.organizationName ||
       user.joinStatus,
+  )
+}
+
+function hasCallbackPayload(searchParams: URLSearchParams) {
+  return Boolean(
+    searchParams.get('error') ||
+      searchParams.get('message') ||
+      searchParams.get('tempToken') ||
+      searchParams.get('accessToken') ||
+      searchParams.get('token') ||
+      hasUserIdentity(userFromSearchParams(searchParams)),
   )
 }
 
