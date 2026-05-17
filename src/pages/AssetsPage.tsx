@@ -9,7 +9,7 @@ import { Drawer } from '../components/common/Drawer'
 import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
-import { getStoredUser } from '../lib/auth'
+import { useAuth } from '../lib/authState'
 import type { Asset, RentalRecord } from '../types'
 
 const defaultAssetForm = {
@@ -26,7 +26,8 @@ export default function AssetsPage() {
   const { currentCohortId } = useCohortStore()
   const { assets, addAsset, updateAsset, deleteAsset, rentAsset, updateRental, returnAsset } = useAssetStore()
   const toast = useToast()
-  const userName = getStoredUser()?.name ?? ''
+  const { user } = useAuth()
+  const userName = user?.name ?? ''
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')

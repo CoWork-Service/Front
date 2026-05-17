@@ -1,4 +1,4 @@
-import { expireAuthSession, getApiBaseUrl, getStoredUser, normalizeJoinStatus, saveAuthSession } from './auth'
+import { expireAuthSession, getApiBaseUrl } from './auth'
 
 type ApiResponse<T> = {
   success?: boolean
@@ -49,27 +49,10 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
 
 async function refreshAccessToken() {
   try {
-    const response = await sendApiRequest<{
-      userId?: number
-      name?: string
-      email?: string | null
-      joinStatus?: string
-    }>('/api/auth/refresh', {
+    await sendApiRequest('/api/auth/refresh', {
       method: 'POST',
     }, false)
 
-    const storedUser = getStoredUser()
-    saveAuthSession({
-      user: {
-        ...(storedUser ?? {}),
-        userId: response.userId ?? storedUser?.userId,
-        name: response.name ?? storedUser?.name,
-        email: response.email ?? storedUser?.email,
-        joinStatus: normalizeJoinStatus(response.joinStatus ?? storedUser?.joinStatus),
-      },
-      authenticated: true,
-      onboardingRequired: false,
-    })
     return true
   } catch {
     expireAuthSession()

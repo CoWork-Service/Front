@@ -3,17 +3,17 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, ShieldCheck, TriangleAlert } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 import {
-  hasAuthenticatedSession,
   normalizeJoinStatus,
   parseBooleanParam,
-  saveAuthSession,
   userFromToken,
   type AuthUser,
 } from '../lib/auth'
+import { useAuth } from '../lib/authState'
 
 export default function SsoCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { status, setAuthenticatedUser } = useAuth()
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -28,12 +28,6 @@ export default function SsoCallbackPage() {
       const accessToken = searchParams.get('accessToken') || searchParams.get('token')
 
       if (tempToken) {
-        saveAuthSession({
-          tempToken,
-          user: userFromSearchParams(searchParams),
-          onboardingRequired: true,
-          onboardingStatus: 'select',
-        })
         navigate(`/onboarding?tempToken=${encodeURIComponent(tempToken)}`, { replace: true })
         return
       }
@@ -42,7 +36,7 @@ export default function SsoCallbackPage() {
       const queryUser = userFromSearchParams(searchParams)
 
       if (!accessToken && !hasUserIdentity(queryUser)) {
-        if (hasAuthenticatedSession()) {
+        if (status === 'authenticated') {
           navigate('/home', { replace: true })
           return
         }
@@ -58,24 +52,12 @@ export default function SsoCallbackPage() {
       }
 
       if (user.joinStatus === 'PENDING') {
-        saveAuthSession({
-          user,
-          authenticated: false,
-          onboardingRequired: true,
-          onboardingStatus: 'pending',
-        })
-        navigate('/pending', { replace: true })
+        navigate(statusPath('/pending', user), { replace: true })
         return
       }
 
       if (user.joinStatus === 'REJECTED') {
-        saveAuthSession({
-          user,
-          authenticated: false,
-          onboardingRequired: true,
-          onboardingStatus: 'rejected',
-        })
-        navigate('/rejected', { replace: true })
+        navigate(statusPath('/rejected', user), { replace: true })
         return
       }
 
@@ -86,26 +68,16 @@ export default function SsoCallbackPage() {
           : parseBooleanParam(hasCouncilParam) || Boolean(user.organizationId || user.organizationName)
 
       if (!hasCouncil) {
-        saveAuthSession({
-          user,
-          authenticated: false,
-          onboardingRequired: true,
-          onboardingStatus: 'select',
-        })
         navigate('/onboarding', { replace: true })
         return
       }
 
-      saveAuthSession({
-        user: { ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus },
-        authenticated: true,
-        onboardingRequired: false,
-      })
+      setAuthenticatedUser({ ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus })
       navigate('/home', { replace: true })
     }
 
     processCallback()
-  }, [navigate, searchParams])
+  }, [navigate, searchParams, setAuthenticatedUser, status])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -141,6 +113,14 @@ export default function SsoCallbackPage() {
       </div>
     </div>
   )
+}
+
+function statusPath(path: '/pending' | '/rejected', user: AuthUser) {
+  const params = new URLSearchParams()
+  if (user.name) params.set('name', user.name)
+  if (user.studentId) params.set('studentId', user.studentId)
+  const query = params.toString()
+  return query ? `${path}?${query}` : path
 }
 
 function hasUserIdentity(user: AuthUser) {
