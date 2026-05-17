@@ -1,9 +1,27 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, FileText, ShieldCheck } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
+import { useAuth } from '../lib/authState'
 
 export default function PrivacyPolicyPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { status, user } = useAuth()
+  const returnTo = safeReturnPath(searchParams.get('returnTo'))
+
+  const handleBack = () => {
+    if (returnTo) {
+      navigate(returnTo, { replace: true })
+      return
+    }
+    if (status === 'authenticated') {
+      navigate(user?.consentRequired ? '/consent' : '/home', { replace: true })
+      return
+    }
+    navigate('/', { replace: true })
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:py-10">
       <main className="w-full max-w-3xl mx-auto">
@@ -16,10 +34,7 @@ export default function PrivacyPolicyPage() {
             </div>
           </Link>
           <button
-            onClick={() => {
-              if (window.history.length > 1) window.history.back()
-              else window.location.assign('/')
-            }}
+            onClick={handleBack}
             className="btn-secondary py-1.5"
           >
             <ArrowLeft size={15} />
@@ -98,6 +113,11 @@ export default function PrivacyPolicyPage() {
       </main>
     </div>
   )
+}
+
+function safeReturnPath(value: string | null) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return ''
+  return value
 }
 
 function PolicySection({ title, children }: { title: string; children: ReactNode }) {

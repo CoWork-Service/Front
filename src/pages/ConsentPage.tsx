@@ -173,9 +173,7 @@ export default function ConsentPage() {
                   <p>CLOVA OCR 등 외부 OCR 처리업체에 영수증 이미지 분석 업무를 위탁할 수 있으며, 자세한 내용은 개인정보 처리방침에 고지합니다.</p>
                 </div>
                 <Link
-                  to="/privacy"
-                  target="_blank"
-                  rel="noreferrer"
+                  to="/privacy?returnTo=/consent"
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
                 >
                   개인정보 처리방침 보기
