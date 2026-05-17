@@ -13,7 +13,7 @@ import { useAuth } from '../lib/authState'
 export default function SsoCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { status, setAuthenticatedUser, refreshSession } = useAuth()
+  const { status, user: currentUser, setAuthenticatedUser } = useAuth()
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -40,9 +40,7 @@ export default function SsoCallbackPage() {
           return
         }
         if (status === 'authenticated') {
-          void refreshSession().then((currentUser) => {
-            navigate(currentUser?.consentRequired ? '/consent' : '/home', { replace: true })
-          })
+          navigate(currentUser?.consentRequired ? '/consent' : '/home', { replace: true })
           return
         }
         setError('SSO 로그인 결과를 확인할 수 없습니다.')
@@ -79,13 +77,11 @@ export default function SsoCallbackPage() {
 
       const authenticatedUser = { ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus }
       setAuthenticatedUser(authenticatedUser)
-      void refreshSession().then((currentUser) => {
-        navigate((currentUser || authenticatedUser).consentRequired ? '/consent' : '/home', { replace: true })
-      })
+      navigate(authenticatedUser.consentRequired ? '/consent' : '/home', { replace: true })
     }
 
     processCallback()
-  }, [navigate, refreshSession, searchParams, setAuthenticatedUser, status])
+  }, [currentUser, navigate, searchParams, setAuthenticatedUser, status])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
