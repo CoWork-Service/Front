@@ -1,4 +1,4 @@
-import { clearAuthSession, getApiBaseUrl, getStoredUser, normalizeJoinStatus, saveAuthSession } from './auth'
+import { expireAuthSession, getApiBaseUrl, getStoredUser, normalizeJoinStatus, saveAuthSession } from './auth'
 
 type ApiResponse<T> = {
   success?: boolean
@@ -72,7 +72,7 @@ async function refreshAccessToken() {
     })
     return true
   } catch {
-    clearAuthSession()
+    expireAuthSession()
     return false
   }
 }

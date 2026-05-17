@@ -1,8 +1,8 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { ToastProvider } from './components/common/Toast'
-import { hasAuthenticatedSession, hasSsoIdentity, needsOnboarding } from './lib/auth'
+import { AUTH_SESSION_EXPIRED_EVENT, hasAuthenticatedSession, hasSsoIdentity, needsOnboarding } from './lib/auth'
 
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -46,10 +46,26 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AuthSessionWatcher() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const handleExpired = () => {
+      navigate('/login', { replace: true })
+    }
+
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpired)
+    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpired)
+  }, [navigate])
+
+  return null
+}
+
 export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
+        <AuthSessionWatcher />
         <Routes>
           {/* 공개 라우트 */}
           <Route path="/" element={<LandingPage />} />

@@ -63,6 +63,8 @@ export const AUTH_KEYS = {
   onboardingStatus: 'cowork_onboarding_status',
 } as const
 
+export const AUTH_SESSION_EXPIRED_EVENT = 'cowork:auth-session-expired'
+
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
 }
@@ -143,6 +145,11 @@ export function saveAuthSession(options: {
 
 export function clearAuthSession() {
   Object.values(AUTH_KEYS).forEach((key) => localStorage.removeItem(key))
+}
+
+export function expireAuthSession() {
+  clearAuthSession()
+  window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT))
 }
 
 export async function logoutSession() {
