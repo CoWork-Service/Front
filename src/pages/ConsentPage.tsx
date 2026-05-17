@@ -18,7 +18,7 @@ type ConsentStatus = {
 
 export default function ConsentPage() {
   const navigate = useNavigate()
-  const { user, refreshSession, setAuthenticatedUser } = useAuth()
+  const { status, user, refreshSession, setAuthenticatedUser } = useAuth()
   const [termsAgreed, setTermsAgreed] = useState(false)
   const [privacyAgreed, setPrivacyAgreed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -26,7 +26,8 @@ export default function ConsentPage() {
 
   const termsVersion = user?.termsVersion || '2026-05-17'
   const privacyVersion = user?.privacyVersion || '2026-05-17'
-  const canSubmit = termsAgreed && privacyAgreed && !isSubmitting
+  const isAuthenticated = status === 'authenticated'
+  const canSubmit = isAuthenticated && termsAgreed && privacyAgreed && !isSubmitting
 
   useEffect(() => {
     if (user && !user.consentRequired) {
@@ -47,6 +48,10 @@ export default function ConsentPage() {
   )
 
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true })
+      return
+    }
     if (!canSubmit) return
     setIsSubmitting(true)
     setError('')
@@ -88,6 +93,12 @@ export default function ConsentPage() {
             <p className="text-sm text-slate-500 mt-2 leading-relaxed">
               아래 항목은 서비스 제공에 반드시 필요한 내용입니다. 동의하지 않으면 CoWork를 사용할 수 없습니다.
             </p>
+            {status === 'checking' && (
+              <p className="text-xs text-blue-600 mt-3">로그인 상태를 확인하고 있습니다.</p>
+            )}
+            {status === 'anonymous' && (
+              <p className="text-xs text-red-600 mt-3">동의 저장을 위해 다시 로그인해 주세요.</p>
+            )}
           </div>
           <button
             onClick={handleLogout}
@@ -191,12 +202,12 @@ export default function ConsentPage() {
             {error && <p className="mt-4 text-sm text-red-600 leading-relaxed">{error}</p>}
 
             <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
+              onClick={status === 'anonymous' ? () => navigate('/login', { replace: true }) : handleSubmit}
+              disabled={status !== 'anonymous' && !canSubmit}
               className="btn-primary w-full justify-center mt-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-              동의하고 시작하기
+              {status === 'anonymous' ? '로그인하러 가기' : '동의하고 시작하기'}
             </button>
           </aside>
         </div>

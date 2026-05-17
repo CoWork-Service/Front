@@ -100,14 +100,7 @@ export default function App() {
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/auth/sso/callback" element={<SsoCallbackPage />} />
             <Route path="/main" element={<SsoCallbackPage />} />
-            <Route
-              path="/consent"
-              element={
-                <RequireAuth allowMissingConsent>
-                  <ConsentPage />
-                </RequireAuth>
-              }
-            />
+            <Route path="/consent" element={<ConsentPage />} />
             <Route
               path="/onboarding"
               element={
