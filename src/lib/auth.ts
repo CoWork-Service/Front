@@ -11,6 +11,9 @@ export type AuthUser = {
   organizationDepartments?: string[]
   role?: string
   joinStatus?: JoinStatus
+  consentRequired?: boolean
+  termsVersion?: string
+  privacyVersion?: string
 }
 
 export type SsoProfile = {
@@ -31,6 +34,9 @@ type TokenResponse = {
   name?: string
   email?: string | null
   joinStatus?: string
+  consentRequired?: boolean
+  termsVersion?: string
+  privacyVersion?: string
 }
 
 type JwtPayload = Record<string, string | number | null | undefined>
@@ -64,6 +70,7 @@ const LEGACY_AUTH_STORAGE_KEYS = [
 ] as const
 
 export const AUTH_SESSION_EXPIRED_EVENT = 'cowork:auth-session-expired'
+export const AUTH_CONSENT_REQUIRED_EVENT = 'cowork:policy-consent-required'
 
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '')
@@ -118,6 +125,9 @@ export function userFromToken(accessToken: string): AuthUser {
     organizationName: tokenString(pickTokenValue(payload, ['organizationName', 'orgName'])),
     role: tokenString(pickTokenValue(payload, ['role', 'authority'])),
     joinStatus: normalizeJoinStatus(tokenString(payload.joinStatus)),
+    consentRequired: parseBooleanParam(tokenString(payload.consentRequired) || null),
+    termsVersion: tokenString(payload.termsVersion),
+    privacyVersion: tokenString(payload.privacyVersion),
   }
 }
 

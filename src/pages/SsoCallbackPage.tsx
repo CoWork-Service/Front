@@ -13,7 +13,7 @@ import { useAuth } from '../lib/authState'
 export default function SsoCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { status, setAuthenticatedUser } = useAuth()
+  const { status, setAuthenticatedUser, refreshSession } = useAuth()
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -40,7 +40,9 @@ export default function SsoCallbackPage() {
           return
         }
         if (status === 'authenticated') {
-          navigate('/home', { replace: true })
+          void refreshSession().then((currentUser) => {
+            navigate(currentUser?.consentRequired ? '/consent' : '/home', { replace: true })
+          })
           return
         }
         setError('SSO 로그인 결과를 확인할 수 없습니다.')
@@ -75,12 +77,15 @@ export default function SsoCallbackPage() {
         return
       }
 
-      setAuthenticatedUser({ ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus })
-      navigate('/home', { replace: true })
+      const authenticatedUser = { ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus }
+      setAuthenticatedUser(authenticatedUser)
+      void refreshSession().then((currentUser) => {
+        navigate((currentUser || authenticatedUser).consentRequired ? '/consent' : '/home', { replace: true })
+      })
     }
 
     processCallback()
-  }, [navigate, searchParams, setAuthenticatedUser, status])
+  }, [navigate, refreshSession, searchParams, setAuthenticatedUser, status])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -155,5 +160,8 @@ function userFromSearchParams(searchParams: URLSearchParams): AuthUser {
     organizationName: searchParams.get('organizationName') || searchParams.get('orgName') || undefined,
     role: searchParams.get('role') || undefined,
     joinStatus: joinStatus ? normalizeJoinStatus(joinStatus) : undefined,
+    consentRequired: searchParams.has('consentRequired') ? parseBooleanParam(searchParams.get('consentRequired')) : undefined,
+    termsVersion: searchParams.get('termsVersion') || undefined,
+    privacyVersion: searchParams.get('privacyVersion') || undefined,
   }
 }

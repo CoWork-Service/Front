@@ -1,4 +1,4 @@
-import { expireAuthSession, getApiBaseUrl } from './auth'
+import { AUTH_CONSENT_REQUIRED_EVENT, expireAuthSession, getApiBaseUrl } from './auth'
 
 type ApiResponse<T> = {
   success?: boolean
@@ -41,6 +41,9 @@ async function sendApiRequest<T>(path: string, init: RequestInit, allowRefresh: 
 
   const body = (await response.json().catch(() => ({}))) as ApiResponse<T>
   if (!response.ok || body.success === false) {
+    if (body.code === 'POLICY_CONSENT_REQUIRED') {
+      window.dispatchEvent(new Event(AUTH_CONSENT_REQUIRED_EVENT))
+    }
     throw new Error(body.message || '요청 처리에 실패했습니다.')
   }
 

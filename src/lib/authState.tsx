@@ -20,6 +20,9 @@ type MeResponse = {
   email?: string | null
   organizationId?: number
   organizationName?: string
+  consentRequired?: boolean
+  termsVersion?: string
+  privacyVersion?: string
 }
 
 type AuthStatus = 'checking' | 'authenticated' | 'anonymous'
@@ -140,5 +143,8 @@ function toAuthUser(response: MeResponse): AuthUser {
     organizationId: response.organizationId,
     organizationName: response.organizationName,
     joinStatus: 'ACTIVE',
+    consentRequired: Boolean(response.consentRequired),
+    termsVersion: response.termsVersion,
+    privacyVersion: response.privacyVersion,
   }
 }

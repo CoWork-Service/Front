@@ -5,7 +5,7 @@ import { buildSsoLoginUrl, logoutSession } from '../lib/auth'
 import { useAuth } from '../lib/authState'
 
 export default function LoginPage() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
 
   const handleSsoLogin = () => {
     void logoutSession().finally(() => {
@@ -14,7 +14,7 @@ export default function LoginPage() {
   }
 
   if (status === 'authenticated') {
-    return <Navigate to="/home" replace />
+    return <Navigate to={user?.consentRequired ? '/consent' : '/home'} replace />
   }
 
   return (

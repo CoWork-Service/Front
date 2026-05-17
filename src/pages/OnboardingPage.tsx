@@ -159,8 +159,15 @@ export default function OnboardingPage() {
       const authenticatedJoinStatus = joinStatus === 'UNKNOWN' ? 'ACTIVE' : joinStatus
 
       if (authenticatedJoinStatus !== 'PENDING' && authenticatedJoinStatus !== 'REJECTED') {
-        setAuthenticatedUser({ ...responseUser, joinStatus: authenticatedJoinStatus })
-        navigate('/home', { replace: true })
+        const authenticatedUser = {
+          ...responseUser,
+          joinStatus: authenticatedJoinStatus,
+          consentRequired: Boolean(response.consentRequired),
+          termsVersion: response.termsVersion,
+          privacyVersion: response.privacyVersion,
+        }
+        setAuthenticatedUser(authenticatedUser)
+        navigate(authenticatedUser.consentRequired ? '/consent' : '/home', { replace: true })
         return
       }
 

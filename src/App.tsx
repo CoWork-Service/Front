@@ -2,11 +2,13 @@ import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { ToastProvider } from './components/common/Toast'
-import { AUTH_SESSION_EXPIRED_EVENT } from './lib/auth'
+import { AUTH_CONSENT_REQUIRED_EVENT, AUTH_SESSION_EXPIRED_EVENT } from './lib/auth'
 import { AuthProvider, useAuth } from './lib/authState'
 
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import ConsentPage from './pages/ConsentPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import SsoCallbackPage from './pages/SsoCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
 import SsoStatusPage from './pages/SsoStatusPage'
@@ -32,11 +34,15 @@ import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import MobileRegisterPage from './pages/MobileRegisterPage'
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { status } = useAuth()
+function RequireAuth({ children, allowMissingConsent = false }: { children: React.ReactNode; allowMissingConsent?: boolean }) {
+  const location = useLocation()
+  const { status, user } = useAuth()
 
   if (status === 'checking') return <RouteLoading />
   if (status !== 'authenticated') return <Navigate to="/login" replace />
+  if (!allowMissingConsent && user?.consentRequired) {
+    return <Navigate to="/consent" replace state={{ from: location.pathname }} />
+  }
   return <>{children}</>
 }
 
@@ -66,9 +72,16 @@ function AuthSessionWatcher() {
     const handleExpired = () => {
       navigate('/login', { replace: true })
     }
+    const handleConsentRequired = () => {
+      navigate('/consent', { replace: true })
+    }
 
     window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpired)
-    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpired)
+    window.addEventListener(AUTH_CONSENT_REQUIRED_EVENT, handleConsentRequired)
+    return () => {
+      window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpired)
+      window.removeEventListener(AUTH_CONSENT_REQUIRED_EVENT, handleConsentRequired)
+    }
   }, [navigate])
 
   return null
@@ -84,8 +97,17 @@ export default function App() {
             {/* 공개 라우트 */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/auth/sso/callback" element={<SsoCallbackPage />} />
             <Route path="/main" element={<SsoCallbackPage />} />
+            <Route
+              path="/consent"
+              element={
+                <RequireAuth allowMissingConsent>
+                  <ConsentPage />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/onboarding"
               element={
