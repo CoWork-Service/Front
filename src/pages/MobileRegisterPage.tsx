@@ -6,10 +6,11 @@ import type { BudgetCategory, PaymentMethod } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
-const formRowCls = 'grid grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-3 px-4 py-3 min-h-14'
-const amountRowCls = 'grid grid-cols-[4.75rem_minmax(0,1fr)_1.25rem] items-center gap-3 px-4 py-3 min-h-14'
-const formLabelCls = 'text-xs font-medium text-slate-500 whitespace-nowrap'
-const formControlCls = 'block w-full min-w-0 h-9 bg-transparent text-sm leading-5 text-slate-800 focus:outline-none placeholder:text-slate-300'
+const formRowCls = 'grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-3 px-4 py-3 min-h-14'
+const amountRowCls = 'grid grid-cols-[5rem_minmax(0,1fr)_1.25rem] items-center gap-3 px-4 py-3 min-h-14'
+const formLabelCls = 'self-center text-xs font-medium text-slate-500 whitespace-nowrap'
+const formControlCls = 'block w-full min-w-0 h-9 bg-transparent py-0 text-left text-sm leading-5 text-slate-800 focus:outline-none placeholder:text-slate-300'
+const formDateCls = `${formControlCls} mobile-date-input appearance-none`
 const formSelectCls = `${formControlCls} pr-1`
 
 type Step = 'photo' | 'ocr' | 'form' | 'done'
@@ -340,11 +341,11 @@ export default function MobileRegisterPage() {
 
   // ── STEP 2: OCR 결과 수정 폼 ─────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-[100dvh] bg-slate-50 flex flex-col">
       <Header />
       <StepIndicator current={2} />
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-4">
         {/* 영수증 미리보기 */}
         {imageUrl && (
           <div className="flex justify-center">
@@ -369,7 +370,7 @@ export default function MobileRegisterPage() {
               type="date"
               value={form.date}
               onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              className={formControlCls}
+              className={formDateCls}
             />
           </label>
 
@@ -460,7 +461,7 @@ export default function MobileRegisterPage() {
       </div>
 
       {/* 제출 버튼 */}
-      <div className="px-5 pt-3 pb-10 bg-slate-50 border-t border-slate-100 shrink-0">
+      <div className="px-5 pt-3 pb-[calc(2.5rem+env(safe-area-inset-bottom))] bg-slate-50 border-t border-slate-100 shrink-0">
         <button
           onClick={handleSubmit}
           disabled={submitting || !imageFile || !form.vendor || !form.amount || !form.date}
