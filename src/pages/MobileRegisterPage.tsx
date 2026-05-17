@@ -15,12 +15,19 @@ const formSelectCls = `${formControlCls} pr-1`
 
 type Step = 'photo' | 'ocr' | 'form' | 'done'
 
+type MobileEventOption = {
+  id: number
+  name: string
+  startDate?: string | null
+}
+
 type MobileSessionStatus = {
   sessionToken: string
   used: boolean
   expired: boolean
   expenseId?: number | null
   expiresAt: string
+  events?: MobileEventOption[]
 }
 
 type ReceiptOcrResponse = {
@@ -75,6 +82,7 @@ export default function MobileRegisterPage() {
     amount: '',
     paymentMethod: '' as PaymentMethod | '',
     description: '',
+    eventId: '',
     note: '',
   })
 
@@ -141,6 +149,7 @@ export default function MobileRegisterPage() {
         amount: ocr.amount ? String(ocr.amount) : '',
         paymentMethod: asPaymentMethod(ocr.paymentMethod),
         description: ocr.description || '',
+        eventId: '',
         note: '',
       })
     } catch (error) {
@@ -191,6 +200,7 @@ export default function MobileRegisterPage() {
           amount,
           paymentMethod: form.paymentMethod || '개인카드',
           note: form.note || undefined,
+          eventId: form.eventId ? Number(form.eventId) : undefined,
         }),
       })
       setStep('done')
@@ -431,6 +441,22 @@ export default function MobileRegisterPage() {
               placeholder="지출 내용"
               className={formControlCls}
             />
+          </label>
+
+          <label className={formRowCls}>
+            <span className={formLabelCls}>연결 행사</span>
+            <select
+              value={form.eventId}
+              onChange={(e) => setForm((f) => ({ ...f, eventId: e.target.value }))}
+              className={formSelectCls}
+            >
+              <option value="">행사 미연결</option>
+              {(session.events ?? []).map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name}{event.startDate ? ` (${event.startDate})` : ''}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className={formRowCls}>
