@@ -684,8 +684,8 @@ export default function BudgetPage() {
                       <div className="flex items-center gap-1">
                         {bankRows.length > 0 && (
                           isExpenseInBank(e)
-                            ? <CheckCircle2 size={13} className="text-emerald-500 mr-0.5 shrink-0" title="통장 매칭됨" />
-                            : <XCircle size={13} className="text-amber-400 mr-0.5 shrink-0" title="통장 미매칭" />
+                            ? <CheckCircle2 size={13} className="text-emerald-500 mr-0.5 shrink-0" />
+                            : <XCircle size={13} className="text-amber-400 mr-0.5 shrink-0" />
                         )}
                         <button onClick={() => openEdit(e)} className="p-1 rounded text-slate-400 hover:text-slate-700"><Edit2 size={13} /></button>
                         <button onClick={() => setDeleteConfirm(e.id)} className="p-1 rounded text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
