@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, ShieldCheck, TriangleAlert } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
@@ -15,9 +15,10 @@ const CALLBACK_SESSION_WAIT_MS = 3500
 export default function SsoCallbackPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { status, user: currentUser, setAuthenticatedUser } = useAuth()
+  const { status, user: currentUser, refreshSession } = useAuth()
   const [error, setError] = useState('')
   const [sessionWaitExpired, setSessionWaitExpired] = useState(false)
+  const processedCallbackRef = useRef('')
 
   useEffect(() => {
     if (hasCallbackPayload(searchParams) || status !== 'checking') {
@@ -30,7 +31,7 @@ export default function SsoCallbackPage() {
   }, [searchParams, status])
 
   useEffect(() => {
-    const processCallback = () => {
+    const processCallback = async () => {
       const errorMessage = searchParams.get('error') || searchParams.get('message')
       if (errorMessage) {
         setError(errorMessage)
@@ -47,6 +48,7 @@ export default function SsoCallbackPage() {
 
       const tokenUser = accessToken ? userFromToken(accessToken) : {}
       const queryUser = userFromSearchParams(searchParams)
+      const callbackKey = searchParams.toString()
 
       if (!accessToken && !hasUserIdentity(queryUser)) {
         if (status === 'checking' && !sessionWaitExpired) {
@@ -59,6 +61,11 @@ export default function SsoCallbackPage() {
         setError('SSO 로그인 세션을 확인할 수 없습니다. 다시 로그인해 주세요.')
         return
       }
+
+      if (processedCallbackRef.current === callbackKey) {
+        return
+      }
+      processedCallbackRef.current = callbackKey
 
       const user: AuthUser = {
         ...tokenUser,
@@ -88,13 +95,17 @@ export default function SsoCallbackPage() {
         return
       }
 
-      const authenticatedUser = { ...user, joinStatus: user.joinStatus === 'UNKNOWN' ? 'ACTIVE' : user.joinStatus }
-      setAuthenticatedUser(authenticatedUser)
+      const authenticatedUser = await refreshSession()
+      if (!authenticatedUser) {
+        setError('SSO 로그인은 완료됐지만 로그인 쿠키를 확인하지 못했습니다. 다시 로그인해 주세요.')
+        return
+      }
+
       navigate(authenticatedUser.consentRequired ? '/consent' : '/home', { replace: true })
     }
 
     processCallback()
-  }, [currentUser, navigate, searchParams, sessionWaitExpired, setAuthenticatedUser, status])
+  }, [currentUser, navigate, refreshSession, searchParams, sessionWaitExpired, status])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
