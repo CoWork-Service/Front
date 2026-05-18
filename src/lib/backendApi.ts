@@ -278,6 +278,7 @@ export type ApiExpense = {
   photoIds?: number[] | null
   note?: string | null
   eventId?: number | null
+  receiptDatetime?: string | null
   createdAt: string
 }
 
@@ -297,6 +298,7 @@ export function toExpense(item: ApiExpense): Expense {
     note: item.note ?? undefined,
     createdAt: item.createdAt,
     eventId: item.eventId ? String(item.eventId) : undefined,
+    receiptDatetime: item.receiptDatetime ?? undefined,
   }
 }
 

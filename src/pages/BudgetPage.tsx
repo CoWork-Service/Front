@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Plus, Search, Trash2, Edit2, Eye, Smartphone, CalendarDays, Image, CheckSquare, Square } from 'lucide-react'
+import { Plus, Search, Trash2, Edit2, Eye, Smartphone, CalendarDays, Image, CheckSquare, Square, FileSpreadsheet, CheckCircle2, XCircle } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
 import { useBudgetStore } from '../store/useBudgetStore'
@@ -18,6 +18,13 @@ import type { Expense, Department, BudgetCategory, PaymentMethod, EventPhoto } f
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
+
+type BankRow = {
+  dateTime: string | null
+  vendor: string
+  amount: number
+  description: string | null
+}
 
 type MobileSessionResponse = {
   sessionToken: string
@@ -78,6 +85,7 @@ const defaultForm = {
   photoIds: [] as string[],
   note: '',
   eventId: '',
+  receiptDateTime: null as string | null,
 }
 
 // ── 증빙 미리보기 모달 ────────────────────────────────────────────────────────
@@ -250,6 +258,10 @@ export default function BudgetPage() {
   const [qrExpiresAt, setQrExpiresAt] = useState<string | null>(null)
   const [qrRemaining, setQrRemaining] = useState(0)
   const [qrLoading, setQrLoading] = useState(false)
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const [bankOpen, setBankOpen] = useState(false)
+  const [bankRows, setBankRows] = useState<BankRow[]>([])
+  const [bankLoading, setBankLoading] = useState(false)
 
   const generateQrSession = useCallback(async () => {
     setQrLoading(true)
@@ -367,8 +379,86 @@ export default function BudgetPage() {
       photoIds: e.photoIds ?? [],
       note: e.note ?? '',
       eventId: e.eventId ?? '',
+      receiptDateTime: e.receiptDatetime ?? null,
     })
     setFormOpen(true)
+  }
+
+  const handleBankUpload = async (files: File[]) => {
+    const file = files[0]
+    if (!file) return
+    setBankLoading(true)
+    setBankRows([])
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const rows = await apiRequest<BankRow[]>('/api/expenses/parse-excel', { method: 'POST', body: fd })
+      setBankRows(rows)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '파일 파싱에 실패했습니다.')
+    } finally {
+      setBankLoading(false)
+    }
+  }
+
+  // 금액 일치 + (receiptDatetime 있으면 ±1분, 없으면 날짜 일치) → 매칭 간주
+  const isBankRowMatched = (row: BankRow) => {
+    if (!row.dateTime) return false
+    return cohortExpenses.some((e) => {
+      if (e.amount !== row.amount) return false
+      if (e.receiptDatetime) {
+        const diff = Math.abs(new Date(e.receiptDatetime).getTime() - new Date(row.dateTime!).getTime())
+        return diff <= 60_000  // ±1분
+      }
+      return e.date === row.dateTime!.substring(0, 10)
+    })
+  }
+
+  // 지출 내역 → 통장 내역 매칭 여부 (bankRows 없으면 null)
+  const isExpenseInBank = (expense: Expense): boolean | null => {
+    if (bankRows.length === 0) return null
+    return bankRows.some((row) => {
+      if (!row.dateTime) return false
+      if (expense.amount !== row.amount) return false
+      if (expense.receiptDatetime) {
+        const diff = Math.abs(new Date(expense.receiptDatetime).getTime() - new Date(row.dateTime).getTime())
+        return diff <= 60_000
+      }
+      return expense.date === row.dateTime.substring(0, 10)
+    })
+  }
+
+  const handleReceiptFiles = async (files: File[]) => {
+    const file = files[0] ?? null
+    setForm((prev) => ({ ...prev, receiptFile: file }))
+    if (!file || !file.type.startsWith('image/')) return
+
+    setOcrLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      // dateTime: "yyyy-MM-dd'T'HH:mm" 형식
+      const result = await apiRequest<{ dateTime: string | null; amount: number | null }>(
+        '/api/expenses/ocr',
+        { method: 'POST', body: fd }
+      )
+      // date 필드(input[type=date])는 "yyyy-MM-dd" 형식만 받으므로 앞 10자리만 사용
+      const datePart = result.dateTime ? result.dateTime.substring(0, 10) : null
+      setForm((prev) => ({
+        ...prev,
+        receiptFile: file,
+        date: prev.date || datePart || prev.date,
+        amount: prev.amount || (result.amount != null ? String(result.amount) : prev.amount),
+        receiptDateTime: result.dateTime ?? prev.receiptDateTime,
+      }))
+      if (datePart || result.amount != null) {
+        toast.success('영수증에서 날짜·금액을 자동으로 입력했습니다.')
+      }
+    } catch {
+      // OCR 실패해도 파일 선택은 유지
+    } finally {
+      setOcrLoading(false)
+    }
   }
 
   const handleSave = async () => {
@@ -392,6 +482,7 @@ export default function BudgetPage() {
       photoIds: form.photoIds.length > 0 ? form.photoIds : undefined,
       note: form.note || undefined,
       eventId: form.eventId || undefined,
+      receiptDatetime: form.receiptDateTime ?? undefined,
     }
     try {
       if (editTarget) {
@@ -428,10 +519,16 @@ export default function BudgetPage() {
         title="예산 처리"
         description="지출 내역과 영수증을 관리합니다."
         actions={
-          <button onClick={openCreate} className="btn-primary">
-            <Plus size={16} />
-            지출 등록
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setBankRows([]); setBankOpen(true) }} className="btn-secondary flex items-center gap-1.5">
+              <FileSpreadsheet size={16} />
+              통장 등록
+            </button>
+            <button onClick={openCreate} className="btn-primary">
+              <Plus size={16} />
+              지출 등록
+            </button>
+          </div>
         }
       />
 
@@ -479,7 +576,37 @@ export default function BudgetPage() {
           <button onClick={() => { setSearch(''); setDeptFilter(''); setCategoryFilter(''); setEventFilter('') }}
             className="text-xs text-slate-500 hover:text-slate-700 underline">초기화</button>
         )}
+        <button
+          onClick={() => { setBankRows([]); setBankOpen(true) }}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap"
+        >
+          <FileSpreadsheet size={14} />
+          통장 내역 업로드
+        </button>
       </div>
+
+      {/* 통장 대사 결과 배너 */}
+      {bankRows.length > 0 && (
+        <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+          <FileSpreadsheet size={14} className="text-blue-500 shrink-0" />
+          <div className="flex items-center gap-3 text-sm flex-1 flex-wrap">
+            <span className="text-blue-700 font-medium">통장 대사 결과</span>
+            <span className="text-slate-500">총 {bankRows.length}건</span>
+            <span className="flex items-center gap-1 text-emerald-600">
+              <CheckCircle2 size={13} />매칭 <span className="font-semibold">{bankRows.filter(isBankRowMatched).length}</span>건
+            </span>
+            <span className="flex items-center gap-1 text-rose-500">
+              <XCircle size={13} />미매칭 <span className="font-semibold">{bankRows.length - bankRows.filter(isBankRowMatched).length}</span>건
+            </span>
+          </div>
+          <button onClick={() => setBankOpen(true)} className="text-xs text-blue-600 hover:text-blue-800 underline whitespace-nowrap">
+            상세 보기
+          </button>
+          <button onClick={() => setBankRows([])} className="text-xs text-slate-400 hover:text-slate-600 whitespace-nowrap ml-1">
+            ✕ 닫기
+          </button>
+        </div>
+      )}
 
       {/* 테이블 */}
       <div className="card overflow-hidden">
@@ -505,7 +632,11 @@ export default function BudgetPage() {
                   ? (linkedEvent.photos ?? []).filter((p) => e.photoIds?.includes(p.id))
                   : []
                 return (
-                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={e.id} className={`border-b border-slate-100 transition-colors ${
+                    bankRows.length > 0
+                      ? isExpenseInBank(e) ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-amber-50/60 hover:bg-amber-100/60'
+                      : 'hover:bg-slate-50'
+                  }`}>
                     <td className="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">{e.date}</td>
                     <td className="px-4 py-3"><DepartmentTag department={e.department} /></td>
                     <td className="px-4 py-3 text-sm text-slate-600">{e.category}</td>
@@ -551,6 +682,11 @@ export default function BudgetPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {bankRows.length > 0 && (
+                          isExpenseInBank(e)
+                            ? <CheckCircle2 size={13} className="text-emerald-500 mr-0.5 shrink-0" />
+                            : <XCircle size={13} className="text-amber-400 mr-0.5 shrink-0" />
+                        )}
                         <button onClick={() => openEdit(e)} className="p-1 rounded text-slate-400 hover:text-slate-700"><Edit2 size={13} /></button>
                         <button onClick={() => setDeleteConfirm(e.id)} className="p-1 rounded text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
                       </div>
@@ -638,9 +774,15 @@ export default function BudgetPage() {
             <FileUploadDropzone
               accept="image/*,.pdf"
               label="영수증을 드래그하거나 클릭하여 업로드"
-              hint="이미지 또는 PDF 파일을 S3에 저장합니다."
-              onFiles={(files) => setForm({ ...form, receiptFile: files[0] ?? null })}
+              hint="이미지 업로드 시 날짜·금액·가맹점이 자동 입력됩니다."
+              onFiles={handleReceiptFiles}
             />
+            {ocrLoading && (
+              <p className="text-xs text-blue-600 mt-1.5 flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                영수증 분석 중...
+              </p>
+            )}
           </div>
           {form.eventId && (
             <div className="col-span-2">
@@ -676,6 +818,100 @@ export default function BudgetPage() {
         receiptUrl={evidenceExpense?.expense.receiptUrl}
         photos={evidencePhotos}
       />
+
+      {/* 통장 대사 모달 */}
+      <Modal
+        open={bankOpen}
+        onClose={() => setBankOpen(false)}
+        title="통장 대사"
+        size="lg"
+      >
+        {bankRows.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-500">통장 거래 내역 엑셀 파일(.xlsx, .xls)을 업로드하면 이미 등록된 지출과 자동으로 대사합니다.</p>
+            <FileUploadDropzone
+              accept=".xlsx,.xls"
+              label="통장 엑셀 파일을 드래그하거나 클릭하여 업로드"
+              hint=".xlsx / .xls 형식 지원"
+              onFiles={handleBankUpload}
+            />
+            {bankLoading && (
+              <p className="text-xs text-blue-600 flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                파일 파싱 중...
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* 요약 */}
+            {(() => {
+              const matched = bankRows.filter(isBankRowMatched).length
+              const unmatched = bankRows.length - matched
+              return (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-slate-500">총 <span className="font-semibold text-slate-800">{bankRows.length}</span>건</span>
+                    <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 size={13} /> 매칭 <span className="font-semibold">{matched}</span>건</span>
+                    <span className="flex items-center gap-1 text-rose-500"><XCircle size={13} /> 미매칭 <span className="font-semibold">{unmatched}</span>건</span>
+                  </div>
+                  <button
+                    onClick={() => setBankRows([])}
+                    className="text-xs text-slate-400 hover:text-slate-600 underline"
+                  >
+                    다시 업로드
+                  </button>
+                </div>
+              )
+            })()}
+
+            {/* 거래 목록 */}
+            <div className="overflow-auto max-h-[420px] rounded-xl border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    {['거래일시', '가맹점', '금액', '상태'].map((h) => (
+                      <th key={h} className="text-left text-xs font-semibold text-slate-500 px-4 py-2.5">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bankRows.map((row, idx) => {
+                    const matched = isBankRowMatched(row)
+                    return (
+                      <tr
+                        key={idx}
+                        className={`border-b border-slate-100 last:border-0 ${matched ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}
+                      >
+                        <td className="px-4 py-2.5 text-slate-600 whitespace-nowrap font-mono text-xs">
+                          {row.dateTime ?? '-'}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-800 font-medium max-w-[160px] truncate">
+                          {row.vendor || '-'}
+                        </td>
+                        <td className="px-4 py-2.5 font-semibold text-slate-900 whitespace-nowrap">
+                          {row.amount.toLocaleString()}원
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {matched ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-100 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 size={11} /> 매칭
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-rose-500 font-medium bg-rose-50 px-2 py-0.5 rounded-full">
+                              <XCircle size={11} /> 미매칭
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* 삭제 확인 */}
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="삭제 확인" size="sm" footer={

@@ -77,6 +77,7 @@ function expenseToFormData(expense: Partial<Expense>, receipt?: File | null) {
   if (expense.note !== undefined) form.append('note', expense.note)
   if (expense.eventId) form.append('eventId', expense.eventId)
   expense.photoIds?.forEach((photoId) => form.append('photoIds', photoId))
+  if (expense.receiptDatetime) form.append('receiptDatetime', expense.receiptDatetime)
   if (receipt) form.append('receipt', receipt)
   return form
 }
