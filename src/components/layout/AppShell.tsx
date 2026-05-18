@@ -58,10 +58,10 @@ export function AppShell() {
   ])
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="h-[100dvh] overflow-hidden bg-slate-50">
       <Sidebar />
       <TopHeader />
-      <main className="ml-64 mt-16 p-6 min-h-[calc(100vh-64px)]">
+      <main className="ml-64 mt-16 h-[calc(100dvh-4rem)] overflow-y-auto p-6">
         <Outlet />
       </main>
     </div>

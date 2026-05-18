@@ -82,7 +82,7 @@ export type Expense = {
   note?: string
   createdAt: string
   eventId?: string
-  receiptDatetime?: string  // OCR 추출 결제 시각 (yyyy-MM-dd'T'HH:mm), 통장 대사 매칭용
+  receiptDatetime?: string  // OCR 추출 결제 시각 (yyyy-MM-dd'T'HH:mm), 통장 매칭용
 }
 
 // ==================== 자산 관리 ====================

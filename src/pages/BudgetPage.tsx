@@ -507,16 +507,10 @@ export default function BudgetPage() {
         title="예산 처리"
         description="지출 내역과 영수증을 관리합니다."
         actions={
-          <div className="flex items-center gap-2">
-            <button onClick={() => { setBankRows([]); setBankOpen(true) }} className="btn-secondary flex items-center gap-1.5">
-              <FileSpreadsheet size={16} />
-              통장 등록
-            </button>
-            <button onClick={openCreate} className="btn-primary">
-              <Plus size={16} />
-              지출 등록
-            </button>
-          </div>
+          <button onClick={openCreate} className="btn-primary">
+            <Plus size={16} />
+            지출 등록
+          </button>
         }
       />
 
@@ -573,12 +567,12 @@ export default function BudgetPage() {
         </button>
       </div>
 
-      {/* 통장 대사 결과 배너 */}
+      {/* 통장 매칭 결과 배너 */}
       {bankRows.length > 0 && (
         <div className="mb-3 flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
           <FileSpreadsheet size={14} className="text-blue-500 shrink-0" />
           <div className="flex items-center gap-3 text-sm flex-1 flex-wrap">
-            <span className="text-blue-700 font-medium">통장 대사 결과</span>
+            <span className="text-blue-700 font-medium">통장 매칭 결과</span>
             <span className="text-slate-500">총 {bankRows.length}건</span>
             <span className="flex items-center gap-1 text-emerald-600">
               <CheckCircle2 size={13} />매칭 <span className="font-semibold">{bankRows.filter(isBankRowMatched).length}</span>건
@@ -807,16 +801,16 @@ export default function BudgetPage() {
         photos={evidencePhotos}
       />
 
-      {/* 통장 대사 모달 */}
+      {/* 통장 매칭 모달 */}
       <Modal
         open={bankOpen}
         onClose={() => setBankOpen(false)}
-        title="통장 대사"
+        title="통장 매칭"
         size="lg"
       >
         {bankRows.length === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">통장 거래 내역 엑셀 파일(.xlsx, .xls)을 업로드하면 이미 등록된 지출과 자동으로 대사합니다.</p>
+            <p className="text-sm text-slate-500">통장 거래 내역 엑셀 파일(.xlsx, .xls)을 업로드하면 이미 등록된 지출과 자동으로 매칭합니다.</p>
             <FileUploadDropzone
               accept=".xlsx,.xls"
               label="통장 엑셀 파일을 드래그하거나 클릭하여 업로드"
