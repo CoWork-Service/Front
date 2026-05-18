@@ -157,6 +157,7 @@ function changedSummary(log: AuditLog) {
 }
 
 function summaryFields(log: AuditLog) {
+  if (log.action === 'CREATE' || log.action === 'UPLOAD') return []
   const businessFields = log.changedFields.filter((field) => !summaryHiddenFields.has(field))
   return (businessFields.length > 0 ? businessFields : log.changedFields).slice(0, 3)
 }
@@ -198,6 +199,7 @@ export function AuditLogTimeline({
         const previewFields = summaryFields(log)
         const allFields = detailFields(log)
         const hiddenCount = Math.max(0, allFields.length - previewFields.length)
+        const showDetailsButton = hiddenCount > 0 || (previewFields.length === 0 && allFields.length > 0)
         const toggleExpanded = () => {
           setExpandedIds((current) => {
             const next = new Set(current)
@@ -262,7 +264,17 @@ export function AuditLogTimeline({
                   </div>
                 )}
 
-                {isExpanded && hiddenCount > 0 && (
+                {previewFields.length === 0 && showDetailsButton && (
+                  <button
+                    onClick={toggleExpanded}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    {isExpanded ? '상세 접기' : '상세보기'}
+                  </button>
+                )}
+
+                {isExpanded && showDetailsButton && (
                   <div className="mt-3 overflow-hidden rounded-lg border border-slate-200">
                     <div className="grid grid-cols-[110px_1fr_1fr] bg-slate-50 text-xs font-semibold text-slate-500">
                       <div className="px-3 py-2">필드</div>
