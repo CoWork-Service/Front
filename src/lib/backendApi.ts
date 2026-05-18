@@ -3,6 +3,9 @@ import { getApiBaseUrl } from './auth'
 import type {
   Asset,
   AssetStatus,
+  AuditAction,
+  AuditLog,
+  AuditTargetType,
   BudgetCategory,
   Cohort,
   CoworkEvent,
@@ -261,6 +264,42 @@ export function toFileLog(log: ApiFileLog): FileLog {
     actor: log.actorName ?? '',
     timestamp: log.createdAt,
     detail: log.detail ? JSON.stringify(log.detail) : undefined,
+  }
+}
+
+export type ApiAuditLog = {
+  id: number
+  actorId?: number | null
+  actorName?: string | null
+  action: AuditAction
+  targetType: AuditTargetType
+  targetId?: number | null
+  targetLabel?: string | null
+  cohortId?: number | null
+  beforeData?: Record<string, unknown> | null
+  afterData?: Record<string, unknown> | null
+  changedFields?: string[] | null
+  ipAddress?: string | null
+  userAgent?: string | null
+  createdAt: string
+}
+
+export function toAuditLog(log: ApiAuditLog): AuditLog {
+  return {
+    id: String(log.id),
+    actorId: log.actorId ? String(log.actorId) : undefined,
+    actorName: log.actorName ?? undefined,
+    action: log.action,
+    targetType: log.targetType,
+    targetId: log.targetId ? String(log.targetId) : undefined,
+    targetLabel: log.targetLabel ?? undefined,
+    cohortId: log.cohortId ? String(log.cohortId) : undefined,
+    beforeData: log.beforeData ?? null,
+    afterData: log.afterData ?? null,
+    changedFields: log.changedFields ?? [],
+    ipAddress: log.ipAddress ?? undefined,
+    userAgent: log.userAgent ?? undefined,
+    createdAt: log.createdAt,
   }
 }
 
@@ -730,4 +769,37 @@ export async function fetchWorkspaces(cohortId: string) {
     const detail = details[index]
     return detail.status === 'fulfilled' ? toWorkspace(detail.value.workspace, detail.value.meetings) : toWorkspace(summary)
   })
+}
+
+export type AuditLogQuery = {
+  targetType?: AuditTargetType
+  targetId?: string
+  action?: AuditAction
+  actorId?: string
+  dateFrom?: string
+  dateTo?: string
+  limit?: number
+}
+
+export async function fetchAuditLogs(query: AuditLogQuery = {}) {
+  const logs = await apiRequest<ApiAuditLog[]>(buildApiPath('/api/audit-logs', {
+    targetType: query.targetType,
+    targetId: query.targetId,
+    action: query.action,
+    actorId: query.actorId,
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
+    limit: query.limit,
+  }))
+  return logs.map(toAuditLog)
+}
+
+export async function fetchRecentAuditLogs(limit = 50) {
+  const logs = await apiRequest<ApiAuditLog[]>(buildApiPath('/api/audit-logs/recent', { limit }))
+  return logs.map(toAuditLog)
+}
+
+export async function fetchExpenseHistory(expenseId: string) {
+  const logs = await apiRequest<ApiAuditLog[]>(`/api/expenses/${expenseId}/history`)
+  return logs.map(toAuditLog)
 }

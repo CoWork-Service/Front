@@ -61,6 +61,37 @@ export type FileItem = {
   eventId?: string
 }
 
+// ==================== 수정 이력 ====================
+
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'UPLOAD' | 'MATCH' | 'APPROVE' | 'REJECT'
+
+export type AuditTargetType =
+  | 'EXPENSE'
+  | 'EVENT'
+  | 'FILE'
+  | 'ASSET'
+  | 'STUDENT'
+  | 'ORGANIZATION'
+  | 'COHORT'
+  | 'ORG_MEMBER'
+
+export type AuditLog = {
+  id: string
+  actorId?: string
+  actorName?: string
+  action: AuditAction
+  targetType: AuditTargetType
+  targetId?: string
+  targetLabel?: string
+  cohortId?: string
+  beforeData?: Record<string, unknown> | null
+  afterData?: Record<string, unknown> | null
+  changedFields: string[]
+  ipAddress?: string
+  userAgent?: string
+  createdAt: string
+}
+
 // ==================== 예산 처리 ====================
 
 export type PaymentMethod = '법인카드' | '개인카드' | '현금' | '계좌이체'

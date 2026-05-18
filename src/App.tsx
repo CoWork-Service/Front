@@ -33,6 +33,7 @@ import OrgPage from './pages/OrgPage'
 import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import MobileRegisterPage from './pages/MobileRegisterPage'
+import AuditLogsPage from './pages/AuditLogsPage'
 
 function RequireAuth({ children, allowMissingConsent = false }: { children: React.ReactNode; allowMissingConsent?: boolean }) {
   const location = useLocation()
@@ -150,6 +151,7 @@ export default function App() {
               <Route path="/schedules/:pollId/respond" element={<ScheduleRespondPage />} />
               <Route path="/schedules/:pollId/results" element={<ScheduleResultsPage />} />
               <Route path="/org" element={<OrgPage />} />
+              <Route path="/history" element={<AuditLogsPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -10,6 +10,7 @@ import {
   Layers,
   CalendarClock,
   CalendarDays,
+  History,
   ShieldCheck,
 } from 'lucide-react'
 import logoUrl from '../../assets/logo.png'
@@ -24,6 +25,7 @@ const mainNavItems = [
   { to: '/surveys', label: '설문 조사', icon: <ClipboardList size={18} /> },
   { to: '/workspaces', label: '워크스페이스', icon: <Layers size={18} /> },
   { to: '/schedules', label: '일정 관리', icon: <CalendarClock size={18} /> },
+  { to: '/history', label: '수정 이력', icon: <History size={18} /> },
 ]
 
 function NavItem({ to, label, icon }: { to: string; label: string; icon: React.ReactNode }) {

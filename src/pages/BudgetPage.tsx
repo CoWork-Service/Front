@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { Plus, Search, Trash2, Edit2, Eye, Smartphone, CalendarDays, Image, CheckSquare, Square, FileSpreadsheet, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Search, Trash2, Edit2, Eye, Smartphone, CalendarDays, Image, CheckSquare, Square, FileSpreadsheet, CheckCircle2, XCircle, History } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
 import { useBudgetStore } from '../store/useBudgetStore'
@@ -10,12 +10,14 @@ import { DepartmentTag } from '../components/common/DepartmentTag'
 import { EmptyState } from '../components/common/EmptyState'
 import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
+import { Drawer } from '../components/common/Drawer'
+import { AuditLogTimeline } from '../components/common/AuditLogTimeline'
 import { useToast } from '../components/common/Toast'
 import { apiRequest } from '../lib/api'
-import { toExpense, type ApiExpense } from '../lib/backendApi'
+import { fetchExpenseHistory, toExpense, type ApiExpense } from '../lib/backendApi'
 import { mergeDepartmentOptions } from '../lib/departments'
 import { useDepartmentStore } from '../store/useDepartmentStore'
-import type { Expense, Department, BudgetCategory, PaymentMethod, EventPhoto } from '../types'
+import type { Expense, Department, BudgetCategory, PaymentMethod, EventPhoto, AuditLog } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
@@ -246,6 +248,9 @@ export default function BudgetPage() {
   const [bankOpen, setBankOpen] = useState(false)
   const [bankRows, setBankRows] = useState<BankRow[]>([])
   const [bankLoading, setBankLoading] = useState(false)
+  const [historyExpense, setHistoryExpense] = useState<Expense | null>(null)
+  const [historyLogs, setHistoryLogs] = useState<AuditLog[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const generateQrSession = useCallback(async () => {
     setQrLoading(true)
@@ -497,6 +502,19 @@ export default function BudgetPage() {
     }
   }
 
+  const openHistory = async (expense: Expense) => {
+    setHistoryExpense(expense)
+    setHistoryLogs([])
+    setHistoryLoading(true)
+    try {
+      setHistoryLogs(await fetchExpenseHistory(expense.id))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '수정 이력을 불러오지 못했습니다.')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   const handleEventChange = (eventId: string) => {
     setForm({ ...form, eventId, photoIds: [] })
   }
@@ -669,6 +687,7 @@ export default function BudgetPage() {
                             ? <CheckCircle2 size={13} className="text-emerald-500 mr-0.5 shrink-0" />
                             : <XCircle size={13} className="text-amber-400 mr-0.5 shrink-0" />
                         )}
+                        <button onClick={() => void openHistory(e)} className="p-1 rounded text-slate-400 hover:text-blue-600"><History size={13} /></button>
                         <button onClick={() => openEdit(e)} className="p-1 rounded text-slate-400 hover:text-slate-700"><Edit2 size={13} /></button>
                         <button onClick={() => setDeleteConfirm(e.id)} className="p-1 rounded text-slate-400 hover:text-red-500"><Trash2 size={13} /></button>
                       </div>
@@ -800,6 +819,23 @@ export default function BudgetPage() {
         receiptUrl={evidenceExpense?.expense.receiptUrl}
         photos={evidencePhotos}
       />
+
+      <Drawer
+        open={!!historyExpense}
+        onClose={() => setHistoryExpense(null)}
+        title="수정 이력"
+        width="w-[520px]"
+      >
+        {historyExpense && (
+          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">{historyExpense.vendor}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {historyExpense.date} · {historyExpense.amount.toLocaleString()}원 · {historyExpense.department}
+            </p>
+          </div>
+        )}
+        <AuditLogTimeline logs={historyLogs} isLoading={historyLoading} emptyText="이 지출 내역의 수정 이력이 없습니다." />
+      </Drawer>
 
       {/* 통장 매칭 모달 */}
       <Modal
