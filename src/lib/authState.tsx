@@ -23,6 +23,7 @@ type MeResponse = {
   consentRequired?: boolean
   termsVersion?: string
   privacyVersion?: string
+  department?: string | null
 }
 
 type AuthStatus = 'checking' | 'authenticated' | 'anonymous'
@@ -165,5 +166,6 @@ function toAuthUser(response: MeResponse): AuthUser {
     consentRequired: Boolean(response.consentRequired),
     termsVersion: response.termsVersion,
     privacyVersion: response.privacyVersion,
+    department: response.department,
   }
 }
