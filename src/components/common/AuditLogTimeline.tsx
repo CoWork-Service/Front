@@ -155,13 +155,6 @@ export function AuditLogTimeline({
                   )}
                 </div>
               )}
-
-              {(log.ipAddress || log.userAgent) && (
-                <div className="mt-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">
-                  {log.ipAddress && <span>IP {log.ipAddress}</span>}
-                  {log.userAgent && <span className="ml-2 truncate">{log.userAgent}</span>}
-                </div>
-              )}
             </div>
           </div>
         </div>
