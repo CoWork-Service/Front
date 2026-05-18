@@ -82,18 +82,37 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
 }))
 
 function meetingToApiPayload(meeting: Partial<Meeting>) {
-  return {
+  const payload: {
+    title?: string
+    date?: string
+    attendees?: string[]
+    agenda?: string
+    content?: string
+    eventId?: number
+    attachments?: Array<{ fileItemId: number; storagePath: string; name: string; size: number }>
+  } = {
     title: meeting.title,
     date: meeting.date,
     attendees: meeting.attendees ?? [],
     agenda: meeting.agenda,
     content: meeting.content,
     eventId: meeting.eventId ? Number(meeting.eventId) : undefined,
-    attachments: meeting.attachments?.map((attachment) => ({
-      fileItemId: Number(attachment.id),
-      storagePath: attachment.url,
+  }
+
+  if (meeting.attachments) {
+    payload.attachments = meeting.attachments.map((attachment) => ({
+      fileItemId: Number(attachment.fileItemId ?? attachment.id),
+      storagePath: attachment.storagePath ?? extractUploadStoragePath(attachment.url),
       name: attachment.name,
       size: attachment.size,
-    })) ?? [],
+    }))
   }
+
+  return payload
+}
+
+function extractUploadStoragePath(url: string) {
+  const marker = '/uploads/'
+  const markerIndex = url.indexOf(marker)
+  return markerIndex >= 0 ? url.slice(markerIndex + marker.length) : url
 }

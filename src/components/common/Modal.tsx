@@ -18,6 +18,7 @@ const sizeClasses = {
 
 export function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const pointerStartedOnBackdrop = useRef(false)
 
   useEffect(() => {
     if (!open) return
@@ -33,7 +34,13 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onPointerDown={(e) => {
+        pointerStartedOnBackdrop.current = e.target === e.currentTarget
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && pointerStartedOnBackdrop.current) onClose()
+        pointerStartedOnBackdrop.current = false
+      }}
     >
       <div
         ref={ref}

@@ -660,6 +660,7 @@ export type ApiMeeting = {
 
 export type ApiMeetingAttachment = {
   id: number
+  fileItemId?: number | null
   name: string
   storagePath?: string | null
   size?: number | null
@@ -699,7 +700,9 @@ export function toMeeting(item: ApiMeeting): Meeting {
 function toMeetingAttachment(item: ApiMeetingAttachment): MeetingAttachment {
   return {
     id: String(item.id),
+    fileItemId: item.fileItemId ? String(item.fileItemId) : undefined,
     name: item.name,
+    storagePath: item.storagePath ?? undefined,
     url: resolveResourceUrl(item.storagePath ? `/uploads/${item.storagePath}` : undefined) ?? '',
     size: item.size ?? 0,
   }

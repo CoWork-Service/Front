@@ -216,7 +216,9 @@ export type Survey = {
 
 export type MeetingAttachment = {
   id: string
+  fileItemId?: string
   name: string
+  storagePath?: string
   url: string
   size: number
 }
