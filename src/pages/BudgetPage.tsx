@@ -12,12 +12,14 @@ import { FileUploadDropzone } from '../components/common/FileUploadDropzone'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
 import { apiRequest } from '../lib/api'
+import { toExpense, type ApiExpense } from '../lib/backendApi'
 import { mergeDepartmentOptions } from '../lib/departments'
 import { useDepartmentStore } from '../store/useDepartmentStore'
 import type { Expense, Department, BudgetCategory, PaymentMethod, EventPhoto } from '../types'
 
 const CATEGORIES: BudgetCategory[] = ['행사비', '소모품', '식대', '인쇄비', '기타']
 const PAYMENT_METHODS: PaymentMethod[] = ['법인카드', '개인카드', '현금', '계좌이체']
+const MATCH_TOLERANCE_MS = 2 * 60_000
 
 type BankRow = {
   dateTime: string | null
@@ -36,40 +38,22 @@ type MobileUploadResponse = {
   expenseId?: number | null
 }
 
-type ApiExpense = {
-  id: number
-  cohortId: number
-  date: string
-  department: Department
-  category: string
-  vendor: string
+type ReceiptOcrResult = {
+  date?: string | null
+  dateTime?: string | null
+  vendor?: string | null
+  amount?: number | null
+  paymentMethod?: string | null
+  category?: string | null
   description?: string | null
-  amount: number
-  paymentMethod: string
-  receiptUrl?: string | null
-  photoIds?: number[]
-  note?: string | null
-  eventId?: number | null
-  createdAt: string
 }
 
-function toExpense(apiExpense: ApiExpense): Expense {
-  return {
-    id: String(apiExpense.id),
-    cohortId: String(apiExpense.cohortId),
-    date: apiExpense.date,
-    department: apiExpense.department,
-    category: apiExpense.category as BudgetCategory,
-    vendor: apiExpense.vendor,
-    description: apiExpense.description ?? '',
-    amount: apiExpense.amount,
-    paymentMethod: apiExpense.paymentMethod as PaymentMethod,
-    receiptUrl: apiExpense.receiptUrl ?? undefined,
-    photoIds: apiExpense.photoIds?.map(String),
-    note: apiExpense.note ?? undefined,
-    createdAt: apiExpense.createdAt,
-    eventId: apiExpense.eventId ? String(apiExpense.eventId) : undefined,
-  }
+function asBudgetCategory(value?: string | null): BudgetCategory | '' {
+  return CATEGORIES.includes(value as BudgetCategory) ? value as BudgetCategory : ''
+}
+
+function asPaymentMethod(value?: string | null): PaymentMethod | '' {
+  return PAYMENT_METHODS.includes(value as PaymentMethod) ? value as PaymentMethod : ''
 }
 
 const defaultForm = {
@@ -401,14 +385,14 @@ export default function BudgetPage() {
     }
   }
 
-  // 금액 일치 + (receiptDatetime 있으면 ±1분, 없으면 날짜 일치) → 매칭 간주
+  // 금액 일치 + (receiptDatetime 있으면 ±2분, 없으면 날짜 일치) → 매칭 간주
   const isBankRowMatched = (row: BankRow) => {
     if (!row.dateTime) return false
     return cohortExpenses.some((e) => {
       if (e.amount !== row.amount) return false
       if (e.receiptDatetime) {
         const diff = Math.abs(new Date(e.receiptDatetime).getTime() - new Date(row.dateTime!).getTime())
-        return diff <= 60_000  // ±1분
+        return diff <= MATCH_TOLERANCE_MS
       }
       return e.date === row.dateTime!.substring(0, 10)
     })
@@ -422,7 +406,7 @@ export default function BudgetPage() {
       if (expense.amount !== row.amount) return false
       if (expense.receiptDatetime) {
         const diff = Math.abs(new Date(expense.receiptDatetime).getTime() - new Date(row.dateTime).getTime())
-        return diff <= 60_000
+        return diff <= MATCH_TOLERANCE_MS
       }
       return expense.date === row.dateTime.substring(0, 10)
     })
@@ -437,25 +421,29 @@ export default function BudgetPage() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      // dateTime: "yyyy-MM-dd'T'HH:mm" 형식
-      const result = await apiRequest<{ dateTime: string | null; amount: number | null }>(
+      const result = await apiRequest<ReceiptOcrResult>(
         '/api/expenses/ocr',
         { method: 'POST', body: fd }
       )
-      // date 필드(input[type=date])는 "yyyy-MM-dd" 형식만 받으므로 앞 10자리만 사용
-      const datePart = result.dateTime ? result.dateTime.substring(0, 10) : null
+      const datePart = result.date ?? (result.dateTime ? result.dateTime.substring(0, 10) : null)
+      const category = asBudgetCategory(result.category)
+      const paymentMethod = asPaymentMethod(result.paymentMethod)
       setForm((prev) => ({
         ...prev,
         receiptFile: file,
         date: prev.date || datePart || prev.date,
+        vendor: prev.vendor || result.vendor || prev.vendor,
         amount: prev.amount || (result.amount != null ? String(result.amount) : prev.amount),
+        category: prev.category || category || prev.category,
+        paymentMethod: prev.paymentMethod || paymentMethod || prev.paymentMethod,
+        description: prev.description || result.description || prev.description,
         receiptDateTime: result.dateTime ?? prev.receiptDateTime,
       }))
-      if (datePart || result.amount != null) {
-        toast.success('영수증에서 날짜·금액을 자동으로 입력했습니다.')
+      if (datePart || result.amount != null || result.vendor || category || paymentMethod || result.description) {
+        toast.success('영수증에서 지출 정보를 자동으로 입력했습니다.')
       }
-    } catch {
-      // OCR 실패해도 파일 선택은 유지
+    } catch (error) {
+      toast.error(error instanceof Error ? `${error.message} 직접 입력해 주세요.` : 'OCR 분석에 실패했습니다. 직접 입력해 주세요.')
     } finally {
       setOcrLoading(false)
     }

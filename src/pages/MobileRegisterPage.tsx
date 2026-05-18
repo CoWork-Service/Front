@@ -32,6 +32,7 @@ type MobileSessionStatus = {
 
 type ReceiptOcrResponse = {
   date?: string | null
+  dateTime?: string | null
   vendor?: string | null
   amount?: number | null
   paymentMethod?: string | null
@@ -82,6 +83,7 @@ export default function MobileRegisterPage() {
     amount: '',
     paymentMethod: '' as PaymentMethod | '',
     description: '',
+    receiptDateTime: null as string | null,
     eventId: '',
     note: '',
   })
@@ -149,6 +151,7 @@ export default function MobileRegisterPage() {
         amount: ocr.amount ? String(ocr.amount) : '',
         paymentMethod: asPaymentMethod(ocr.paymentMethod),
         description: ocr.description || '',
+        receiptDateTime: ocr.dateTime ?? null,
         eventId: '',
         note: '',
       })
@@ -162,6 +165,7 @@ export default function MobileRegisterPage() {
         amount: '',
         paymentMethod: '',
         description: '',
+        receiptDateTime: null,
       }))
     } finally {
       setStep('form')
@@ -200,6 +204,7 @@ export default function MobileRegisterPage() {
           amount,
           paymentMethod: form.paymentMethod || '개인카드',
           note: form.note || undefined,
+          receiptDatetime: form.receiptDateTime || undefined,
           eventId: form.eventId ? Number(form.eventId) : undefined,
         }),
       })
