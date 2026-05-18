@@ -36,10 +36,23 @@ import type {
   Workspace,
 } from '../types'
 
+const DEFAULT_PRODUCTION_RESOURCE_BASE_URL = 'https://3-35-27-121.nip.io'
+
+function getResourceBaseUrl() {
+  const explicitUrl = import.meta.env.VITE_UPLOAD_BASE_URL || import.meta.env.VITE_API_BASE_URL
+  if (explicitUrl) return explicitUrl.replace(/\/$/, '')
+
+  if (typeof window !== 'undefined' && window.location.origin === 'https://cowork.kro.kr') {
+    return DEFAULT_PRODUCTION_RESOURCE_BASE_URL
+  }
+
+  return getApiBaseUrl()
+}
+
 export function resolveResourceUrl(url?: string | null) {
   if (!url) return undefined
   if (/^https?:\/\//i.test(url)) return url
-  return `${getApiBaseUrl()}${url.startsWith('/') ? url : `/${url}`}`
+  return `${getResourceBaseUrl()}${url.startsWith('/') ? url : `/${url}`}`
 }
 
 export function toDepartment(value?: string | null): Department | undefined {
