@@ -232,6 +232,7 @@ export type ApiFileItem = {
   department?: string | null
   uploadedBy?: string | null
   eventId?: number | null
+  storagePath?: string | null
   downloadUrl?: string | null
   previewUrl?: string | null
   createdAt?: string

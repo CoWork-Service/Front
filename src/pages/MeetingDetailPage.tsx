@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Edit2, Trash2, Calendar, Users, Save, X, Paperclip, CalendarDays } from 'lucide-react'
+import { Edit2, Trash2, Calendar, Users, Save, X, Paperclip, CalendarDays, Upload } from 'lucide-react'
 import { useWorkspaceStore } from '../store/useWorkspaceStore'
 import { useEventStore } from '../store/useEventStore'
 import { useCohortStore } from '../store/useCohortStore'
 import { Modal } from '../components/common/Modal'
 import { useToast } from '../components/common/Toast'
-import type { Meeting } from '../types'
+import { apiRequest } from '../lib/api'
+import type { ApiFileItem } from '../lib/backendApi'
+import type { Meeting, MeetingAttachment } from '../types'
 
 const emptyMeetingForm = {
   title: '',
@@ -33,6 +35,9 @@ export default function MeetingDetailPage() {
   const [editing, setEditing] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [form, setForm] = useState(emptyMeetingForm)
+  const [editAttachments, setEditAttachments] = useState<MeetingAttachment[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [loadError, setLoadError] = useState('')
   const [loadedCohortId, setLoadedCohortId] = useState('')
   const requestedCohortId = useRef<string | null>(null)
@@ -52,6 +57,32 @@ export default function MeetingDetailPage() {
     return <div className="p-8 text-slate-500">{isLoading ? '회의록을 불러오는 중입니다.' : loadError || '회의록을 찾을 수 없습니다.'}</div>
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !currentCohortId) return
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('cohortId', currentCohortId)
+      const saved = await apiRequest<ApiFileItem>('/api/files/upload', { method: 'POST', body: form })
+      const attachment: MeetingAttachment = {
+        id: String(saved.id),
+        fileItemId: String(saved.id),
+        name: saved.name,
+        storagePath: saved.storagePath ?? undefined,
+        url: saved.storagePath ? `/uploads/${saved.storagePath}` : saved.downloadUrl ?? '',
+        size: saved.size ?? 0,
+      }
+      setEditAttachments((prev) => [...prev, attachment])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '파일 업로드에 실패했습니다.')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const handleSave = async () => {
     try {
       await updateMeeting(workspace.id, meeting.id, {
@@ -61,6 +92,7 @@ export default function MeetingDetailPage() {
         agenda: form.agenda,
         content: form.content,
         eventId: form.eventId || undefined,
+        attachments: editAttachments,
       })
       toast.success('회의록이 수정되었습니다.')
       setEditing(false)
@@ -108,7 +140,7 @@ export default function MeetingDetailPage() {
             </>
           ) : (
             <>
-              <button onClick={() => { setForm(meetingToForm(meeting)); setEditing(true) }} className="btn-secondary"><Edit2 size={15} />수정</button>
+              <button onClick={() => { setForm(meetingToForm(meeting)); setEditAttachments(meeting.attachments); setEditing(true) }} className="btn-secondary"><Edit2 size={15} />수정</button>
               <button onClick={() => setDeleteConfirm(true)} className="btn-danger"><Trash2 size={15} />삭제</button>
             </>
           )}
@@ -181,19 +213,40 @@ export default function MeetingDetailPage() {
       <div className="card p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700">첨부 파일</h2>
+          {editing && (
+            <>
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="btn-secondary text-xs py-1 px-2"
+              >
+                <Upload size={13} />
+                {uploading ? '업로드 중...' : '파일 추가'}
+              </button>
+            </>
+          )}
         </div>
-        {meeting.attachments.length === 0 ? (
+        {(editing ? editAttachments : meeting.attachments).length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <Paperclip size={15} />
             <span>첨부 파일이 없습니다.</span>
           </div>
         ) : (
           <div className="space-y-2">
-            {meeting.attachments.map((att) => (
+            {(editing ? editAttachments : meeting.attachments).map((att) => (
               <div key={att.id} className="flex items-center gap-2 text-sm">
                 <Paperclip size={14} className="text-slate-400" />
                 <a href={att.url} className="text-blue-600 hover:underline">{att.name}</a>
                 <span className="text-xs text-slate-400">({(att.size / 1024).toFixed(1)} KB)</span>
+                {editing && (
+                  <button
+                    onClick={() => setEditAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                    className="ml-auto text-slate-400 hover:text-red-500"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
