@@ -32,6 +32,9 @@ const targetLabel: Record<AuditTargetType, string> = {
   ORGANIZATION: '조직',
   COHORT: '기수',
   ORG_MEMBER: '조직 멤버',
+  SURVEY: '설문조사',
+  MEETING: '회의록',
+  SCHEDULE: '일정 관리',
 }
 
 const fieldLabel: Record<string, string> = {

@@ -74,6 +74,9 @@ export type AuditTargetType =
   | 'ORGANIZATION'
   | 'COHORT'
   | 'ORG_MEMBER'
+  | 'SURVEY'
+  | 'MEETING'
+  | 'SCHEDULE'
 
 export type AuditLog = {
   id: string
